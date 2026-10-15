@@ -38,7 +38,7 @@ Before you withdraw, make sure you have:
     Use the [Beneficiaries](/api-reference/beneficiaries) endpoints to save a mobile money number or bank account for the fiat currency you want to receive.
   </Step>
   <Step title="Check your balance">
-    Verify your available balance with [GET /wallet/balances](/api-reference/balances) or by fetching your balance for the specific `symbol` and `network` you plan to withdraw.
+    Verify your available balance with [GET /wallet/assets](/api-reference/balances). Check the `balance` on the address for the `symbol` and `network` you plan to withdraw.
   </Step>
   <Step title="Request a quote">
     Call `POST /wallet/withdraw/quote` to lock a rate and preview fees. The quote is valid for exactly 30 minutes.

@@ -1,0 +1,478 @@
+---
+title: "List orders and their on-chain transactions with pagination"
+sidebarTitle: "Orders"
+description: "GET /orders lists your PeerPesa swap, send, buy, withdraw, and deposit orders with amounts, fees, rates, status, and the on-chain transactions behind each one."
+---
+
+An order is one action you take in PeerPesa, such as swapping cUSD to USDT or sending crypto to a wallet. Each order records what you sent, what the recipient received, the fees and exchange rate, and its status. It also lists the individual `transactions` that carried it out: a swap, for example, has one transaction debiting your wallet and one crediting the recipient, each with its own `tx_hash`.
+
+## GET /orders
+
+Returns your orders, newest first. Supports all [pagination and filter parameters](/pagination) plus order-specific filters.
+
+### Pagination
+
+<ParamField query="page" type="integer" default="1">
+  Page number to return, starting at `1`.
+</ParamField>
+
+<ParamField query="size" default="20" type="integer">
+  Orders per page. Maximum is `100`.
+</ParamField>
+
+<ParamField query="limit" default="20" type="integer">
+  Alias for `size`. If you send both, `size` is used.
+</ParamField>
+
+### Search and dates
+
+<ParamField query="search" type="string">
+  Matches `order_id`, `sender_address`, `recipient_address`, `account_number`, asset symbols, and the `tx_hash` of any transaction in the order. Minimum 2 characters.
+</ParamField>
+
+<ParamField query="start_date" type="string">
+  Only include orders created on or after this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  Only include orders created on or before this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+### Filters
+
+<ParamField query="order_type" type="string">
+  Filter by order type, for example `swap`, `send`, `buy`, `withdraw`, or `deposit`. Comma-separate to match several.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by order status, for example `successful`. Comma-separate to match several.
+</ParamField>
+
+<ParamField query="asset" type="string">
+  Only include orders where `from_asset` or `to_asset` matches, for example `cUSD` or `USDT`.
+</ParamField>
+
+<ParamField query="network" type="string">
+  Only include orders on this network code, for example `cusd`.
+</ParamField>
+
+<ParamField query="fiat_currency" type="string">
+  Only include fiat orders in this currency, for example `KES`.
+</ParamField>
+
+<ParamField query="recurring_payment" type="string">
+  Only include orders created by this [recurring payment](/api-reference/recurring-payments).
+</ParamField>
+
+<ParamField query="min_amount" type="number">
+  Only include orders with `amount` greater than or equal to this value.
+</ParamField>
+
+<ParamField query="max_amount" type="number">
+  Only include orders with `amount` less than or equal to this value.
+</ParamField>
+
+### Sorting
+
+<ParamField query="sort_by" default="created_at" type="string">
+  `created_at`, `updated_at`, or `amount`.
+</ParamField>
+
+<ParamField query="sort_order" default="desc" type="string">
+  `desc` or `asc`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -G "https://api.peerpesa.co/v1/orders" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --data-urlencode "order_type=swap" \
+  --data-urlencode "status=successful" \
+  --data-urlencode "search=cUSD" \
+  --data-urlencode "start_date=2026-07-01" \
+  --data-urlencode "end_date=2026-07-31" \
+  --data-urlencode "page=1" \
+  --data-urlencode "size=20"
+```
+
+```javascript JavaScript
+const query = new URLSearchParams({
+  order_type: "swap",
+  status: "successful",
+  search: "cUSD",
+  start_date: "2026-07-01",
+  end_date: "2026-07-31",
+  page: 1,
+  size: 20,
+});
+const res = await fetch(`https://api.peerpesa.co/v1/orders?${query}`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const { data: orders, pagination } = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "data": [
+    { "order_id": "22573706304032", "order_type": "swap", "status": "successful" }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 1,
+    "total_pages": 1
+  }
+}
+```
+
+Each item in `data` is a full order object, shown below.
+
+## GET /orders/\{order_id\}
+
+Returns one order with its transactions.
+
+<ParamField path="order_id" type="string" required>
+  The order's `order_id`, for example `22573706304032`.
+</ParamField>
+
+```bash cURL
+curl https://api.peerpesa.co/v1/orders/22573706304032 \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+## The order object
+
+This cUSD to USDT swap on Celo shows a complete order:
+
+```json Order expandable
+{
+  "id": "7e158a76-9c0e-40c8-80b3-a17dc9a78dd1",
+  "order_id": "22573706304032",
+  "user_id": "b9ad5560-7d97-4dbf-8bb6-9a1e73b1c008",
+  "asset_id": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+  "network_id": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+  "asset": "cUSD",
+  "network": "cusd",
+  "network_to": "usdt",
+  "from_network": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+  "to_network": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+  "amount": 2.87942,
+  "total_amount": 2.87942,
+  "network_fee": 0,
+  "exchange_fee": 0,
+  "total_fees": 0,
+  "receive_amount": 2.87942,
+  "from_amount": 2.87942,
+  "to_amount": 2.87942,
+  "from_asset_amount": 2.87942,
+  "to_asset_amount": 2.87942,
+  "from_asset": "cUSD",
+  "from_asset_id": "3bb5afa7-947b-4de2-9876-40ec67d174ab",
+  "to_asset": "USDT",
+  "to_asset_id": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+  "country": null,
+  "sender_address": "0xD87f36fe3578ad0F1437470826FCbc010b26e27b",
+  "recipient_address": "0x15cb5Ab94aEfd21A5458FEda25583C9938E83c74",
+  "memo": "",
+  "mode_of_payment": "",
+  "payment_method_id": null,
+  "account_number": null,
+  "payment_details": null,
+  "channel_id": null,
+  "provider_network_id": null,
+  "provider_channel_id": null,
+  "fiat_currency": null,
+  "reason": null,
+  "cancelled_by": null,
+  "cancel_reason": null,
+  "cancel_date": null,
+  "order_type": "swap",
+  "status": "successful",
+  "slippage": null,
+  "exchange_rate": 1,
+  "recurring_payment": "",
+  "created_at": "2026-07-23T05:33:48.000Z",
+  "updated_at": "2026-07-23T05:42:00.000Z",
+  "deleted_at": null,
+  "transactions": [
+    {
+      "id": "54811f9f-2651-4343-ba02-c6c3086f124f",
+      "transaction_id": "40023360527002",
+      "recurring_payment_invoice_id": "",
+      "order_id": "22573706304032",
+      "user_id": "b9ad5560-7d97-4dbf-8bb6-9a1e73b1c008",
+      "transaction_type": "swap",
+      "transfer_type": "token",
+      "amount": 2.77942,
+      "currency": "cUSD",
+      "base_currency": "",
+      "quote_currency": "",
+      "sell_amount": 0,
+      "buy_amount": 0,
+      "exchange_rate": "0.00000000",
+      "ico_unit_price": 0,
+      "to_wallet": "0x4853f1da97B1a7bE8eDc23D8d4372d20c27eF84c",
+      "from_wallet": "0xD87f36fe3578ad0F1437470826FCbc010b26e27b",
+      "account_number": null,
+      "tx_hash": "0xfe4d176771863cbc165c263521859e15bb9b26d3392dcbfa86fec1c7c7183379",
+      "status": "completed",
+      "transaction_description": "",
+      "service_type": null,
+      "memo": "",
+      "approved_by": "",
+      "cancelled_by": "",
+      "transaction_fee_system": 0,
+      "transaction_fee": 0,
+      "transaction_fee_ico": "CUSD",
+      "transaction_error": null,
+      "transaction_admin_info": null,
+      "transaction_message": null,
+      "third_party_status": "",
+      "payment_object": "",
+      "request_obj": "",
+      "deleted_at": null,
+      "updated_at": "2026-07-23T05:38:02.000Z",
+      "created_at": "2026-07-23T05:34:00.000Z"
+    },
+    {
+      "id": "0607feb4-0a4c-4ad7-a0ef-78798f7da34d",
+      "transaction_id": "07920032325060",
+      "recurring_payment_invoice_id": "",
+      "order_id": "22573706304032",
+      "user_id": "0000-0000-0000-0000",
+      "transaction_type": "swap",
+      "transfer_type": "token",
+      "amount": 2.87942,
+      "currency": "USDT",
+      "base_currency": "",
+      "quote_currency": "",
+      "sell_amount": 0,
+      "buy_amount": 0,
+      "exchange_rate": "0.00000000",
+      "ico_unit_price": 0,
+      "to_wallet": "0x15cb5Ab94aEfd21A5458FEda25583C9938E83c74",
+      "from_wallet": "0xB69faFF50c3d17f0C0025269369dF77172137054",
+      "account_number": null,
+      "tx_hash": "0x3adb8ea5e555d45690ccf6330dd27e221e6270ccf775bd7e7e722d2ba4dbc91d",
+      "status": "completed",
+      "transaction_description": "",
+      "service_type": null,
+      "memo": "",
+      "approved_by": "",
+      "cancelled_by": "",
+      "transaction_fee_system": 0,
+      "transaction_fee": 0,
+      "transaction_fee_ico": "USDT",
+      "transaction_error": "",
+      "transaction_admin_info": null,
+      "transaction_message": null,
+      "third_party_status": "",
+      "payment_object": "",
+      "request_obj": "",
+      "deleted_at": null,
+      "updated_at": "2026-07-23T05:41:01.000Z",
+      "created_at": "2026-07-23T05:39:00.000Z"
+    }
+  ]
+}
+```
+
+<Note>
+  Amounts and fees on orders are returned as numbers. Transactions with `user_id` `0000-0000-0000-0000` are PeerPesa system legs, such as the payout that delivers the swapped asset to the recipient.
+</Note>
+
+### Order fields
+
+<ResponseField name="id" type="string">
+  Internal order record ID (UUID).
+</ResponseField>
+
+<ResponseField name="order_id" type="string">
+  Public order number. Use it with `GET /orders/{order_id}` and in support requests.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  ID of the account that placed the order.
+</ResponseField>
+
+<ResponseField name="order_type" type="string">
+  Kind of order, for example `swap`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Order status, for example `successful`.
+</ResponseField>
+
+<ResponseField name="asset" type="string">
+  Asset the order was placed in, for example `cUSD`.
+</ResponseField>
+
+<ResponseField name="asset_id" type="string">
+  ID of the order asset.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Source network or asset code, for example `cusd`.
+</ResponseField>
+
+<ResponseField name="network_to" type="string">
+  Destination network or asset code, for example `usdt`.
+</ResponseField>
+
+<ResponseField name="network_id" type="string">
+  ID of the order's network.
+</ResponseField>
+
+<ResponseField name="from_network" type="string">
+  Network ID the funds left from.
+</ResponseField>
+
+<ResponseField name="to_network" type="string">
+  Network ID the funds arrived on.
+</ResponseField>
+
+<ResponseField name="from_asset" type="string">
+  Asset sent, for example `cUSD`. `from_asset_id` holds its ID.
+</ResponseField>
+
+<ResponseField name="to_asset" type="string">
+  Asset received, for example `USDT`. `to_asset_id` holds its ID.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Order amount in the source asset.
+</ResponseField>
+
+<ResponseField name="total_amount" type="number">
+  Total debited from your balance, including fees.
+</ResponseField>
+
+<ResponseField name="from_amount" type="number">
+  Amount sent. `from_asset_amount` holds the same value in source asset units.
+</ResponseField>
+
+<ResponseField name="to_amount" type="number">
+  Amount converted into the destination asset. `to_asset_amount` holds the same value in destination asset units.
+</ResponseField>
+
+<ResponseField name="receive_amount" type="number">
+  Amount the recipient received after fees.
+</ResponseField>
+
+<ResponseField name="network_fee" type="number">
+  Blockchain network fee.
+</ResponseField>
+
+<ResponseField name="exchange_fee" type="number">
+  PeerPesa conversion fee.
+</ResponseField>
+
+<ResponseField name="total_fees" type="number">
+  Sum of `network_fee` and `exchange_fee`.
+</ResponseField>
+
+<ResponseField name="exchange_rate" type="number">
+  Rate applied between `from_asset` and `to_asset`.
+</ResponseField>
+
+<ResponseField name="slippage" type="number | null">
+  Slippage tolerance used for swaps, or `null`.
+</ResponseField>
+
+<ResponseField name="sender_address" type="string">
+  Wallet address the funds came from.
+</ResponseField>
+
+<ResponseField name="recipient_address" type="string">
+  Wallet address the funds were delivered to.
+</ResponseField>
+
+<ResponseField name="memo" type="string">
+  Memo sent with the order, for networks such as Stellar. Empty when not used.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string | null">
+  Fiat currency for buy and withdraw orders, for example `KES`. `null` for crypto-only orders.
+</ResponseField>
+
+<ResponseField name="country" type="string | null">
+  Country for fiat orders, or `null`.
+</ResponseField>
+
+<ResponseField name="mode_of_payment" type="string">
+  Fiat payment mode for buy and withdraw orders, for example mobile money or bank. Empty for crypto-only orders.
+</ResponseField>
+
+<ResponseField name="payment_method_id" type="string | null">
+  Saved payment method used for fiat orders.
+</ResponseField>
+
+<ResponseField name="account_number" type="string | null">
+  Mobile money or bank account number for fiat orders.
+</ResponseField>
+
+<ResponseField name="payment_details" type="object | null">
+  Extra fiat payment details, when present.
+</ResponseField>
+
+<ResponseField name="channel_id" type="string | null">
+  Payment channel used for fiat orders. `provider_network_id` and `provider_channel_id` identify the payout provider's network and channel.
+</ResponseField>
+
+<ResponseField name="reason" type="string | null">
+  Reason or note attached to the order.
+</ResponseField>
+
+<ResponseField name="cancelled_by" type="string | null">
+  Who cancelled the order, when cancelled. `cancel_reason` and `cancel_date` give the reason and time.
+</ResponseField>
+
+<ResponseField name="recurring_payment" type="string">
+  ID of the [recurring payment](/api-reference/recurring-payments) that created this order. Empty for one-off orders.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp when the order was created. `updated_at` and `deleted_at` track later changes.
+</ResponseField>
+
+<ResponseField name="transactions" type="object[]">
+  On-chain or ledger transactions that carried out the order.
+
+  <Expandable title="transaction properties">
+    <ResponseField name="id" type="string">Internal transaction record ID.</ResponseField>
+    <ResponseField name="transaction_id" type="string">Public transaction number.</ResponseField>
+    <ResponseField name="order_id" type="string">Order this transaction belongs to.</ResponseField>
+    <ResponseField name="user_id" type="string">Account the transaction applies to. `0000-0000-0000-0000` marks a PeerPesa system leg.</ResponseField>
+    <ResponseField name="recurring_payment_invoice_id" type="string">Recurring payment run that created it. Empty otherwise.</ResponseField>
+    <ResponseField name="transaction_type" type="string">Type matching the order, for example `swap`.</ResponseField>
+    <ResponseField name="transfer_type" type="string">How value moved, for example `token`.</ResponseField>
+    <ResponseField name="amount" type="number">Amount moved in this leg.</ResponseField>
+    <ResponseField name="currency" type="string">Asset moved in this leg, for example `cUSD`.</ResponseField>
+    <ResponseField name="from_wallet" type="string">Sending wallet address.</ResponseField>
+    <ResponseField name="to_wallet" type="string">Receiving wallet address.</ResponseField>
+    <ResponseField name="tx_hash" type="string">Blockchain transaction hash. Look it up on the network's block explorer.</ResponseField>
+    <ResponseField name="status" type="string">Transaction status, for example `completed`.</ResponseField>
+    <ResponseField name="memo" type="string">Memo used on this leg, if any.</ResponseField>
+    <ResponseField name="transaction_fee" type="number">Fee charged on this leg. `transaction_fee_ico` is the fee currency.</ResponseField>
+    <ResponseField name="transaction_error" type="string | null">Error details when the leg failed.</ResponseField>
+    <ResponseField name="account_number" type="string | null">Fiat account for fiat legs.</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 timestamp when the leg was created. `updated_at` tracks the last change.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Info>
+  Some transaction fields, such as `base_currency`, `quote_currency`, `sell_amount`, `buy_amount`, `ico_unit_price`, `approved_by`, `transaction_admin_info`, `third_party_status`, `payment_object`, and `request_obj`, are reserved for internal use or other order types and are usually empty.
+</Info>
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `order_not_found` | 404 | No order with this `order_id` exists for your account. |
+| `invalid_parameter` | 400 | `limit` is above `100` or a filter value is invalid. |
+| `unauthorized` | 401 | Token missing or expired. |
+
+See [Error Codes](/errors) for the full list.

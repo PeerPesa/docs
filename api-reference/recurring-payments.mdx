@@ -28,9 +28,9 @@ Recurring payments let you pay the same beneficiary or wallet on a fixed schedul
 | --- | --- |
 | `draft` | Basic info saved; schedule or activation still pending. |
 | `active` | Runs execute on schedule. |
-| `paused` | No runs execute until resumed. Set manually or after 3 failed runs in a row. |
+| `paused` | No runs execute until restarted. Set manually or after 3 failed runs in a row. |
 | `completed` | The last scheduled run finished. |
-| `cancelled` | Stopped permanently. |
+| `deleted` | Removed. No further runs execute. Past transactions are kept. |
 
 ## Step 1: Basic Info
 
@@ -237,7 +237,7 @@ curl https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/review \
   "recipient": {
     "beneficiary_id": "ben_3m7q2c",
     "name": "Jane Wanjiru",
-    "method": "mobile_money",
+    "type": "phone_number",
     "account": "+2547****5678"
   },
   "per_run": {
@@ -325,17 +325,295 @@ At each run time, PeerPesa creates a quote, confirms it, and debits your balance
 - After 3 failed runs in a row, the recurring payment is set to `paused`.
 - You receive `recurring_payment.run_succeeded` or `recurring_payment.run_failed` [webhooks](/webhooks) for every run, and `recurring_payment.run_upcoming` 24 hours before.
 
-## Manage recurring payments
+## Pause a recurring payment
+
+**POST** `/recurring-payments/{id}/pause`
+
+Stops future runs of an `active` recurring payment without deleting it. A run already in progress finishes normally.
+
+<ParamField path="id" type="string" required>
+  Recurring payment ID, for example `rp_5t8w2k`.
+</ParamField>
+
+<ParamField body="reason" type="string">
+  Optional note stored with the pause, for example `"Tenant away in December"`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/pause \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "reason": "Tenant away in December" }'
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/pause",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason: "Tenant away in December" }),
+  }
+);
+const recurring = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "status": "paused",
+  "paused_at": "2026-11-20T10:12:00Z",
+  "pause_reason": "Tenant away in December",
+  "next_run_at": null,
+  "runs_completed": 1,
+  "total_runs": 12
+}
+```
+
+## Restart a recurring payment
+
+**POST** `/recurring-payments/{id}/restart`
+
+Restarts a `paused` recurring payment. Runs missed while paused are skipped, not paid in arrears, and the next run follows the existing schedule. Skipped runs do not count toward `after_occurrences`.
+
+<ParamField path="id" type="string" required>
+  Recurring payment ID.
+</ParamField>
+
+<ParamField body="start_date" type="string">
+  Optional new first run date (`YYYY-MM-DD`). Defaults to the next date on the existing schedule.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/restart \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "start_date": "2027-01-01" }'
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/restart",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ start_date: "2027-01-01" }),
+  }
+);
+const recurring = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "status": "active",
+  "restarted_at": "2026-12-28T08:30:00Z",
+  "next_run_at": "2027-01-01T06:00:00Z",
+  "runs_completed": 1,
+  "total_runs": 12
+}
+```
+
+<Tip>
+  To change the amount or schedule before restarting, call `PATCH /recurring-payments/{id}` or `PUT /recurring-payments/{id}/schedule` while the payment is `paused`.
+</Tip>
+
+## Delete a recurring payment
+
+**DELETE** `/recurring-payments/{id}`
+
+Deletes a recurring payment. No further runs execute and it can no longer be restarted. Transactions from past runs are kept and stay available through the transactions endpoint below and [GET /transactions](/api-reference/transactions).
+
+<ParamField path="id" type="string" required>
+  Recurring payment ID.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k",
+  { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }
+);
+const result = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "status": "deleted",
+  "deleted_at": "2026-12-28T09:00:00Z",
+  "runs_completed": 1
+}
+```
+
+<Warning>
+  Deleting cannot be undone. Pause instead if you may need the schedule again.
+</Warning>
+
+## List transactions for a schedule
+
+**GET** `/recurring-payments/{id}/transactions`
+
+Returns every transaction created by one recurring payment, newest first. Failed runs appear too, with `status: "failed"` and a `failure_code`.
+
+<ParamField path="id" type="string" required>
+  Recurring payment ID.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by transaction status: `pending`, `processing`, `completed`, `failed`, or `refunded`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Matches transaction ID, `reference`, and `tx_hash`. Minimum 2 characters.
+</ParamField>
+
+<ParamField query="start_date" type="string">
+  Only include runs on or after this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  Only include runs on or before this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+<ParamField query="sort_order" default="desc" type="string">
+  `desc` for newest run first, `asc` for oldest first.
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+  Page number to return, starting at `1`. See [Pagination](/pagination).
+</ParamField>
+
+<ParamField query="size" default="20" type="integer">
+  Results per page, up to 100. `limit` is accepted as an alias.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/transactions?page=1&size=10" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/transactions?page=1&size=10",
+  { headers: { Authorization: `Bearer ${accessToken}` } }
+);
+const { data, pagination, summary } = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "recurring_payment_id": "rp_5t8w2k",
+  "data": [
+    {
+      "id": "txn_r7k2m1",
+      "type": "withdraw",
+      "status": "failed",
+      "run_number": 2,
+      "scheduled_for": "2026-12-01T06:00:00Z",
+      "symbol": "USDC",
+      "network": "STELLAR",
+      "amount": "0.00",
+      "fee": null,
+      "failure_code": "insufficient_balance",
+      "reference": "rent-2026-002",
+      "created_at": "2026-12-01T06:00:02Z"
+    },
+    {
+      "id": "txn_q4c9x8",
+      "type": "withdraw",
+      "status": "completed",
+      "run_number": 1,
+      "scheduled_for": "2026-11-01T06:00:00Z",
+      "symbol": "USDC",
+      "network": "STELLAR",
+      "amount": "193.13",
+      "fiat_currency": "KES",
+      "destination_amount": "25000.00",
+      "rate": "129.45",
+      "fee": {
+        "total": "1.50",
+        "currency": "USDC",
+        "processing_fee": "1.00",
+        "network_fee": "0.50"
+      },
+      "failure_code": null,
+      "reference": "rent-2026-001",
+      "created_at": "2026-11-01T06:00:03Z"
+    }
+  ],
+  "summary": {
+    "runs_completed": 1,
+    "runs_failed": 1,
+    "total_paid": "25000.00",
+    "total_paid_currency": "KES",
+    "total_fees": "1.50",
+    "total_fees_currency": "USDC"
+  },
+  "pagination": {
+    "page": 1,
+    "size": 10,
+    "total": 2,
+    "total_pages": 1
+  }
+}
+```
+
+<ResponseField name="data[].run_number" type="integer">
+  Position of this run in the schedule, starting at 1.
+</ResponseField>
+
+<ResponseField name="data[].scheduled_for" type="string">
+  When the run was scheduled to execute (UTC).
+</ResponseField>
+
+<ResponseField name="data[].failure_code" type="string | null">
+  Error code for failed runs, for example `insufficient_balance`. `null` otherwise.
+</ResponseField>
+
+<ResponseField name="summary" type="object">
+  Totals across all runs of this schedule: completed and failed run counts, total paid, and total fees.
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Page details: `page`, `size`, `total`, and `total_pages`. The `summary` totals always cover all runs, not just the current page.
+</ResponseField>
+
+Each item is a full [transaction](/api-reference/transactions). You can also filter all transactions with `GET /transactions?recurring_payment_id=rp_5t8w2k`.
+
+## Other endpoints
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/recurring-payments` | List recurring payments. Filter by `status` and `type`. |
+| `GET` | `/recurring-payments` | List recurring payments. Filter by `status`, `type`, `search`, `start_date`, and `end_date`; paginate with `page` and `size`. |
 | `GET` | `/recurring-payments/{id}` | Retrieve one recurring payment. |
 | `PATCH` | `/recurring-payments/{id}` | Update basic info (`name`, `amount`, `description`). Changes apply from the next run. |
-| `POST` | `/recurring-payments/{id}/pause` | Pause an active recurring payment. |
-| `POST` | `/recurring-payments/{id}/resume` | Resume a paused one. Missed runs are skipped. |
-| `POST` | `/recurring-payments/{id}/cancel` | Cancel permanently. |
-| `GET` | `/recurring-payments/{id}/runs` | List past runs with status and `transaction_id`. |
 
 ## Errors
 
@@ -343,7 +621,8 @@ At each run time, PeerPesa creates a quote, confirms it, and debits your balance
 | --- | --- | --- |
 | `invalid_schedule` | 422 | Missing `day_of_week` or `day_of_month`, or `start_date` in the past. |
 | `schedule_required` | 422 | Activation attempted before a schedule was set. |
-| `invalid_status_transition` | 409 | For example, resuming a cancelled recurring payment. |
+| `invalid_status_transition` | 409 | For example, pausing a payment that is not `active`, or restarting a deleted one. |
+| `recurring_payment_not_found` | 404 | No recurring payment with this ID exists for your account. |
 | `beneficiary_mismatch` | 422 | Beneficiary currency does not match `amount_currency`. |
 | `unsupported_network` | 422 | The source network is not `active`. |
 | `insufficient_balance` | 422 | A run could not be funded. |

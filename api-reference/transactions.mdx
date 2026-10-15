@@ -1,7 +1,7 @@
 ---
 title: "Transaction History and Status Tracking"
 sidebarTitle: "Transactions"
-description: "Query onramp and offramp transactions with filters and cursor pagination, retrieve a single transaction by ID, and understand the transaction status lifecycle."
+description: "Query onramp and offramp transactions with filters and page-number pagination, retrieve a single transaction by ID, and understand the status lifecycle."
 ---
 
 Every conversion you create through PeerPesa is tracked as a transaction. You can list transactions to reconcile activity, filter by status or date, and retrieve a single transaction for full details including fees, rates, and blockchain confirmation data.
@@ -24,6 +24,10 @@ Retrieve a paginated list of transactions with optional filters.
   Filter by transaction type: `onramp`, `offramp`, `deposit`, `withdraw`, `send`, `buy`, or `swap`.
 </ParamField>
 
+<ParamField query="recurring_payment_id" type="string">
+  Only return transactions created by this [recurring payment](/api-reference/recurring-payments), for example `rp_5t8w2k`.
+</ParamField>
+
 <ParamField query="status" type="string">
   Filter by status: `awaiting_payment`, `awaiting_deposit`, `processing`, `completed`, `failed`, `expired`, or `refunded`.
 </ParamField>
@@ -32,20 +36,48 @@ Retrieve a paginated list of transactions with optional filters.
   Filter by blockchain network, for example `stellar` or `celo`.
 </ParamField>
 
-<ParamField query="from" type="string">
-  Start of the date range in ISO 8601 UTC format (for example `2024-01-01T00:00:00Z`).
+<ParamField query="search" type="string">
+  Matches transaction ID, `order_id`, `reference`, wallet addresses, `tx_hash`, and account numbers. Minimum 2 characters.
 </ParamField>
 
-<ParamField query="to" type="string">
-  End of the date range in ISO 8601 UTC format.
+<ParamField query="start_date" type="string">
+  Only include transactions created on or after this date (`YYYY-MM-DD` or ISO 8601, UTC).
 </ParamField>
 
-<ParamField query="limit" default="20" type="integer">
+<ParamField query="end_date" type="string">
+  Only include transactions created on or before this date (`YYYY-MM-DD` or ISO 8601, UTC).
+</ParamField>
+
+<ParamField query="currency" type="string">
+  Filter by asset or fiat currency, for example `USDC` or `KES`.
+</ParamField>
+
+<ParamField query="min_amount" type="number">
+  Only include transactions with an amount greater than or equal to this value.
+</ParamField>
+
+<ParamField query="max_amount" type="number">
+  Only include transactions with an amount less than or equal to this value.
+</ParamField>
+
+<ParamField query="sort_by" default="created_at" type="string">
+  `created_at`, `updated_at`, or `amount`.
+</ParamField>
+
+<ParamField query="sort_order" default="desc" type="string">
+  `desc` or `asc`.
+</ParamField>
+
+<ParamField query="page" default="1" type="integer">
+  Page number to return, starting at `1`. See [Pagination and filters](/pagination).
+</ParamField>
+
+<ParamField query="size" default="20" type="integer">
   Number of results per page. Maximum is `100`.
 </ParamField>
 
-<ParamField query="cursor" type="string">
-  Opaque pagination cursor from the previous `next_cursor` value.
+<ParamField query="limit" default="20" type="integer">
+  Alias for `size`. If you send both, `size` is used.
 </ParamField>
 
 ### Request
@@ -53,12 +85,12 @@ Retrieve a paginated list of transactions with optional filters.
 <CodeGroup>
 
 ```bash cURL
-curl -X GET "https://api.peerpesa.co/v1/transactions?limit=20&status=completed" \
+curl -X GET "https://api.peerpesa.co/v1/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
-fetch('https://api.peerpesa.co/v1/transactions?limit=20&status=completed', {
+fetch('https://api.peerpesa.co/v1/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31', {
   method: 'GET',
   headers: {
     Authorization: 'Bearer <access_token>',
@@ -99,7 +131,12 @@ fetch('https://api.peerpesa.co/v1/transactions?limit=20&status=completed', {
       "updated_at": "2024-06-10T14:35:00Z"
     }
   ],
-  "next_cursor": "eyJpZCI6InR4bl8zajl4MmtMOHBRd1ciLCJjcmVhdGVkX2F0IjoiMjAyNC0wNi0xMFQxNDoyMzowMFoifQ"
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 134,
+    "total_pages": 7
+  }
 }
 ```
 
@@ -141,8 +178,8 @@ fetch('https://api.peerpesa.co/v1/transactions?limit=20&status=completed', {
   Blockchain transaction hash when available (null until confirmed).
 </ResponseField>
 
-<ResponseField name="next_cursor" type="string | null">
-  Cursor to fetch the next page. Null when there are no more results.
+<ResponseField name="pagination" type="object">
+  Page details: `page`, `size`, `total` (matching transactions across all pages), and `total_pages`. See [Pagination](/pagination).
 </ResponseField>
 
 ---

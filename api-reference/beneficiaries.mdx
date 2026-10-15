@@ -1,10 +1,18 @@
 ---
-title: "Beneficiaries: manage offramp payout recipients"
+title: "Beneficiaries: save bank, mobile money, and wallet recipients"
 sidebarTitle: "Beneficiaries"
-description: "Create, list, retrieve, and delete beneficiaries, the mobile money wallets and bank accounts that receive fiat payouts from PeerPesa offramps."
+description: "Create, list, retrieve, and delete PeerPesa beneficiaries of type bank_account, phone_number, or wallet_address for fiat payouts and crypto sends."
 ---
 
-A beneficiary is a saved payout recipient for offramps: a mobile money wallet or bank account in a supported country. Create a beneficiary once, then reference its `beneficiary_id` in every [offramp](/api-reference/offramp) to that recipient.
+A beneficiary is a saved recipient you can pay again without re-entering their details. PeerPesa supports three beneficiary types: `bank_account` and `phone_number` (mobile money) for fiat payouts through [offramps](/api-reference/offramp) and [withdrawals](/api-reference/withdraw), and `wallet_address` for crypto [sends](/api-reference/send). Create a beneficiary once, then reference its `id` as `beneficiary_id`.
+
+## Beneficiary types
+
+| Type | Use for | Required details |
+| --- | --- | --- |
+| `bank_account` | Fiat payouts to a bank account | `bank_code`, `account_number`, `account_name` |
+| `phone_number` | Fiat payouts to a mobile money wallet | `phone_number`, `provider` |
+| `wallet_address` | Crypto sends to a Stellar, Celo, or Bitcoin wallet | `wallet_address`, `network`, `asset`, optional `memo` |
 
 ## The beneficiary object
 
@@ -12,24 +20,66 @@ A beneficiary is a saved payout recipient for offramps: a mobile money wallet or
   Unique identifier, for example `ben_3m7q2c`.
 </ResponseField>
 
+<ResponseField name="type" type="string">
+  `bank_account`, `phone_number`, or `wallet_address`.
+</ResponseField>
+
 <ResponseField name="name" type="string">
-  Recipient's full name.
+  Recipient's full name or a label for the wallet.
 </ResponseField>
 
-<ResponseField name="country" type="string">
-  ISO 3166-1 alpha-2 country code, for example `KE`.
+<ResponseField name="country" type="string | null">
+  ISO 3166-1 alpha-2 country code, for example `KE`. `null` for `wallet_address`.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string">
-  Payout currency: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`.
-</ResponseField>
-
-<ResponseField name="method" type="string">
-  `mobile_money` or `bank_transfer`.
+<ResponseField name="fiat_currency" type="string | null">
+  Payout currency: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`. `null` for `wallet_address`.
 </ResponseField>
 
 <ResponseField name="details" type="object">
-  Mobile money or bank details, depending on `method`.
+  Recipient details for the beneficiary `type`.
+
+  <Expandable title="properties">
+    <ResponseField name="bank_code" type="string">
+      `bank_account` only. Recipient bank's code.
+    </ResponseField>
+
+    <ResponseField name="bank_name" type="string">
+      `bank_account` only. Bank name resolved from `bank_code`.
+    </ResponseField>
+
+    <ResponseField name="account_number" type="string">
+      `bank_account` only. Recipient's account number.
+    </ResponseField>
+
+    <ResponseField name="account_name" type="string">
+      `bank_account` only. Name on the bank account.
+    </ResponseField>
+
+    <ResponseField name="phone_number" type="string">
+      `phone_number` only. Phone number in international format.
+    </ResponseField>
+
+    <ResponseField name="provider" type="string">
+      `phone_number` only. Mobile money provider, for example `mpesa`.
+    </ResponseField>
+
+    <ResponseField name="wallet_address" type="string">
+      `wallet_address` only. Destination wallet address.
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      `wallet_address` only. Network of the address: `stellar`, `celo`, or `btc`.
+    </ResponseField>
+
+    <ResponseField name="asset" type="string">
+      `wallet_address` only. Asset to send, for example `USDC`, `XLM`, `cUSD`, or `USDT`.
+    </ResponseField>
+
+    <ResponseField name="memo" type="string">
+      `wallet_address` only. Memo for Stellar destinations such as exchanges. Empty when not needed.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="created_at" type="string">
@@ -40,38 +90,24 @@ A beneficiary is a saved payout recipient for offramps: a mobile money wallet or
 
 Creates a beneficiary.
 
+<ParamField body="type" type="string" required>
+  `bank_account`, `phone_number`, or `wallet_address`.
+</ParamField>
+
 <ParamField body="name" type="string" required>
-  Recipient's full name.
+  Recipient's full name, or a label for a wallet.
 </ParamField>
 
-<ParamField body="country" type="string" required>
-  ISO 3166-1 alpha-2 country code.
+<ParamField body="country" type="string">
+  ISO 3166-1 alpha-2 country code. Required for `bank_account` and `phone_number`.
 </ParamField>
 
-<ParamField body="fiat_currency" type="string" required>
-  Payout currency for this recipient.
+<ParamField body="fiat_currency" type="string">
+  Payout currency. Required for `bank_account` and `phone_number`, and must be supported for the country.
 </ParamField>
 
-<ParamField body="method" type="string" required>
-  `mobile_money` or `bank_transfer`. Must be supported for the currency.
-</ParamField>
-
-<ParamField body="mobile_money" type="object">
-  Required when `method` is `mobile_money`.
-
-  <Expandable title="properties">
-    <ParamField body="phone_number" type="string" required>
-      Phone number in international format, for example `+254712345678`.
-    </ParamField>
-
-    <ParamField body="provider" type="string" required>
-      Mobile money provider, for example `mpesa`.
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-<ParamField body="bank_transfer" type="object">
-  Required when `method` is `bank_transfer`.
+<ParamField body="bank_account" type="object">
+  Required when `type` is `bank_account`.
 
   <Expandable title="properties">
     <ParamField body="bank_code" type="string" required>
@@ -88,32 +124,54 @@ Creates a beneficiary.
   </Expandable>
 </ParamField>
 
+<ParamField body="phone_number" type="object">
+  Required when `type` is `phone_number`.
+
+  <Expandable title="properties">
+    <ParamField body="phone_number" type="string" required>
+      Phone number in international format, for example `+254712345678`.
+    </ParamField>
+
+    <ParamField body="provider" type="string" required>
+      Mobile money provider, for example `mpesa`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="wallet_address" type="object">
+  Required when `type` is `wallet_address`.
+
+  <Expandable title="properties">
+    <ParamField body="wallet_address" type="string" required>
+      Destination wallet address. Validated against the `network` format.
+    </ParamField>
+
+    <ParamField body="network" type="string" required>
+      `stellar`, `celo`, or `btc`.
+    </ParamField>
+
+    <ParamField body="asset" type="string" required>
+      Asset to send on that network. See [Currencies](/api-reference/coins).
+    </ParamField>
+
+    <ParamField body="memo" type="string">
+      Memo for Stellar addresses that require one, such as exchange deposit addresses.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
 <Tabs>
-  <Tab title="Mobile money">
+  <Tab title="Bank account">
     ```bash cURL
     curl -X POST https://api.peerpesa.co/v1/beneficiaries \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{
-        "name": "Amina Otieno",
-        "country": "KE",
-        "fiat_currency": "KES",
-        "method": "mobile_money",
-        "mobile_money": { "phone_number": "+254712345678", "provider": "mpesa" }
-      }'
-    ```
-  </Tab>
-  <Tab title="Bank transfer">
-    ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
-      -H "Authorization: Bearer $ACCESS_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d '{
+        "type": "bank_account",
         "name": "Chinedu Okafor",
         "country": "NG",
         "fiat_currency": "NGN",
-        "method": "bank_transfer",
-        "bank_transfer": {
+        "bank_account": {
           "bank_code": "058",
           "account_number": "0123456789",
           "account_name": "Chinedu Okafor"
@@ -121,44 +179,153 @@ Creates a beneficiary.
       }'
     ```
   </Tab>
+  <Tab title="Phone number">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "type": "phone_number",
+        "name": "Amina Otieno",
+        "country": "KE",
+        "fiat_currency": "KES",
+        "phone_number": { "phone_number": "+254712345678", "provider": "mpesa" }
+      }'
+    ```
+  </Tab>
+  <Tab title="Wallet address">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "type": "wallet_address",
+        "name": "Treasury wallet",
+        "wallet_address": {
+          "wallet_address": "0x15cb5Ab94aEfd21A5458FEda25583C9938E83c74",
+          "network": "celo",
+          "asset": "USDT"
+        }
+      }'
+    ```
+  </Tab>
 </Tabs>
 
-```json Response
+<CodeGroup>
+
+```json Bank account response
+{
+  "id": "ben_8k2d5n",
+  "type": "bank_account",
+  "name": "Chinedu Okafor",
+  "country": "NG",
+  "fiat_currency": "NGN",
+  "details": {
+    "bank_code": "058",
+    "bank_name": "GTBank",
+    "account_number": "0123456789",
+    "account_name": "Chinedu Okafor"
+  },
+  "created_at": "2026-10-15T05:00:00Z"
+}
+```
+
+```json Phone number response
 {
   "id": "ben_3m7q2c",
+  "type": "phone_number",
   "name": "Amina Otieno",
   "country": "KE",
   "fiat_currency": "KES",
-  "method": "mobile_money",
   "details": { "phone_number": "+254712345678", "provider": "mpesa" },
   "created_at": "2026-10-15T05:00:00Z"
 }
 ```
 
+```json Wallet address response
+{
+  "id": "ben_6w4t9h",
+  "type": "wallet_address",
+  "name": "Treasury wallet",
+  "country": null,
+  "fiat_currency": null,
+  "details": {
+    "wallet_address": "0x15cb5Ab94aEfd21A5458FEda25583C9938E83c74",
+    "network": "celo",
+    "asset": "USDT",
+    "memo": ""
+  },
+  "created_at": "2026-10-15T05:00:00Z"
+}
+```
+
+</CodeGroup>
+
+<Warning>
+  Crypto sent to a wrong address or network cannot be reversed. Double-check `wallet_address` and `network`, and include the `memo` when the destination requires one.
+</Warning>
+
 ## GET /beneficiaries
 
-Lists beneficiaries, newest first.
+Lists beneficiaries, newest first. Supports all [pagination and filter parameters](/pagination).
 
-<ParamField query="limit" default="20" type="integer">
-  Number of results, up to `100`.
+<ParamField query="page" default="1" type="integer">
+  Page number to return, starting at `1`.
 </ParamField>
 
-<ParamField query="cursor" type="string">
-  Value of `next_cursor` from the previous page.
+<ParamField query="size" default="20" type="integer">
+  Results per page, up to `100`. `limit` is accepted as an alias.
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by beneficiary type: `bank_account`, `phone_number`, or `wallet_address`. Comma-separate to match several.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Matches name, phone number, account number, bank name, and wallet address. Minimum 2 characters.
+</ParamField>
+
+<ParamField query="start_date" type="string">
+  Only include beneficiaries created on or after this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  Only include beneficiaries created on or before this date (`YYYY-MM-DD` or ISO 8601).
+</ParamField>
+
+<ParamField query="country" type="string">
+  Filter by ISO country code, for example `KE`.
+</ParamField>
+
+<ParamField query="fiat_currency" type="string">
+  Filter by payout currency, for example `KES`.
+</ParamField>
+
+<ParamField query="network" type="string">
+  Filter `wallet_address` beneficiaries by network: `stellar`, `celo`, or `btc`.
+</ParamField>
+
+<ParamField query="sort_by" default="created_at" type="string">
+  `created_at` or `name`.
+</ParamField>
+
+<ParamField query="sort_order" default="desc" type="string">
+  `desc` or `asc`.
 </ParamField>
 
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v1/beneficiaries?limit=20" \
+curl "https://api.peerpesa.co/v1/beneficiaries?page=1&size=20&type=phone_number&country=KE" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/beneficiaries?limit=20", {
-  headers: { Authorization: `Bearer ${accessToken}` },
-});
-const { data, next_cursor } = await res.json();
+const res = await fetch(
+  "https://api.peerpesa.co/v1/beneficiaries?page=1&size=20&type=phone_number&country=KE",
+  { headers: { Authorization: `Bearer ${accessToken}` } }
+);
+const { data, pagination } = await res.json();
 ```
 
 </CodeGroup>
@@ -168,15 +335,20 @@ const { data, next_cursor } = await res.json();
   "data": [
     {
       "id": "ben_3m7q2c",
+      "type": "phone_number",
       "name": "Amina Otieno",
       "country": "KE",
       "fiat_currency": "KES",
-      "method": "mobile_money",
       "details": { "phone_number": "+254712345678", "provider": "mpesa" },
       "created_at": "2026-10-15T05:00:00Z"
     }
   ],
-  "next_cursor": null
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 1,
+    "total_pages": 1
+  }
 }
 ```
 
@@ -197,3 +369,15 @@ Deletes a beneficiary. Returns `204 No Content` on success. Past transactions to
 curl -X DELETE https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `missing_parameter` | 400 | The details object for the `type` is missing, for example `bank_account` when `type` is `bank_account`. |
+| `invalid_parameter` | 400 | Unknown `type` or an invalid account number. `param` names the field. |
+| `invalid_phone_number` | 422 | Phone number format is invalid for the country. |
+| `invalid_wallet_address` | 422 | `wallet_address` is not valid for the `network`. |
+| `unsupported_pair` | 422 | `fiat_currency` or `provider` is not supported for the `country`. |
+| `unsupported_asset` | 422 | `asset` is not available on the chosen `network`. |
+| `not_found` | 404 | No beneficiary with this ID. |

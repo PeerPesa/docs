@@ -1,0 +1,349 @@
+---
+title: "Fee products: PeerPesa pricing for every transaction type"
+sidebarTitle: "Fee Products"
+description: "List PeerPesa fee products for onramp, offramp, buy, withdraw, swap, send, and deposit, with percentage, fixed, minimum, and maximum fees, and calculate fees."
+---
+
+PeerPesa groups its pricing into **fee products**: one fee schedule per transaction type, such as onramp, offramp, swap, or send. Each fee product defines a percentage fee, a fixed fee, minimum and maximum caps, and whether a network fee applies. Use the fee products endpoints to show pricing in your app before a user starts a transaction, then rely on the [quote](/api-reference/quotes) for the exact, locked fee.
+
+## Fee products
+
+| Product | Applies to | Fee components |
+| --- | --- | --- |
+| `onramp` | Fiat to crypto through [Onramp](/api-reference/onramp) | Processing fee + network fee |
+| `offramp` | Crypto to fiat through [Offramp](/api-reference/offramp) | Processing fee + network fee |
+| `buy` | Buying crypto from your wallet with fiat through [Buy](/api-reference/buy) | Processing fee |
+| `withdraw` | Paying out wallet balance to a bank account or mobile money through [Withdraw](/api-reference/withdraw) | Processing fee |
+| `swap` | Converting between assets through [Swap](/api-reference/swap) | App fee + network fee |
+| `send` | On-chain sends to external wallets through [Send](/api-reference/send) | App fee + network fee |
+| `internal_transfer` | Sends to another PeerPesa user | Free |
+| `deposit` | Crypto received on a [deposit wallet](/api-reference/deposit-wallets) | Free |
+
+## How fees are calculated
+
+For each transaction, PeerPesa calculates the fee from the fee product that matches the transaction type, the asset or fiat currency, and the network:
+
+```text Fee formula
+processing_fee = clamp(amount × percentage / 100 + fixed, min_fee, max_fee)
+total_fee      = processing_fee + network_fee
+```
+
+- `percentage` and `fixed` are applied to the transaction amount, in the fee product's `fee_currency`.
+- The result is raised to `min_fee` or lowered to `max_fee` when it falls outside the caps.
+- `network_fee` is the current blockchain fee for the network and changes with network conditions.
+
+<Note>
+  Fee products show indicative pricing. The exact fee for a transaction is the `fee` object returned by the quote or estimate, which stays fixed for the quote's 30-minute validity.
+</Note>
+
+## The fee product object
+
+<ResponseField name="id" type="string">
+  Unique identifier, for example `fee_offramp_kes`.
+</ResponseField>
+
+<ResponseField name="product" type="string">
+  Transaction type the fee applies to: `onramp`, `offramp`, `buy`, `withdraw`, `swap`, `send`, `internal_transfer`, or `deposit`.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Display name, for example `Offramp to KES`.
+</ResponseField>
+
+<ResponseField name="network" type="string | null">
+  Network the fee applies to: `stellar`, `celo`, or `btc`. `null` when it applies to all networks.
+</ResponseField>
+
+<ResponseField name="asset" type="string | null">
+  Asset the fee applies to, for example `USDC`. `null` when it applies to all assets.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string | null">
+  Fiat currency for fiat products: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`. `null` for crypto-only products.
+</ResponseField>
+
+<ResponseField name="payment_method" type="string | null">
+  Fiat payment method the fee applies to: `bank_account` or `phone_number`. `null` when it applies to all methods.
+</ResponseField>
+
+<ResponseField name="fee_currency" type="string">
+  Currency the fixed, minimum, and maximum fees are expressed in.
+</ResponseField>
+
+<ResponseField name="percentage" type="string">
+  Percentage fee charged on the amount, for example `"1.00"` for 1%.
+</ResponseField>
+
+<ResponseField name="fixed" type="string">
+  Flat fee added to every transaction.
+</ResponseField>
+
+<ResponseField name="min_fee" type="string">
+  Minimum processing fee charged.
+</ResponseField>
+
+<ResponseField name="max_fee" type="string | null">
+  Maximum processing fee charged. `null` for no cap.
+</ResponseField>
+
+<ResponseField name="network_fee" type="object | null">
+  Current network fee, or `null` when no on-chain transaction is involved.
+
+  <Expandable title="properties">
+    <ResponseField name="amount" type="string">Current network fee.</ResponseField>
+    <ResponseField name="currency" type="string">Currency of the network fee.</ResponseField>
+    <ResponseField name="paid_by" type="string">`customer` when added to the fee, `peerpesa` when PeerPesa covers it.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="limits" type="object">
+  Transaction amount limits for this product.
+
+  <Expandable title="properties">
+    <ResponseField name="min_amount" type="string">Smallest allowed transaction amount.</ResponseField>
+    <ResponseField name="max_amount" type="string">Largest allowed transaction amount.</ResponseField>
+    <ResponseField name="currency" type="string">Currency the limits are expressed in.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `active` or `inactive`. Inactive products cannot be used for new transactions.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp of the last pricing change.
+</ResponseField>
+
+## GET /fees
+
+Lists fee products. Supports [pagination and filters](/pagination).
+
+<ParamField query="product" type="string">
+  Filter by product, for example `offramp`. Comma-separate to match several.
+</ParamField>
+
+<ParamField query="network" type="string">
+  Filter by network: `stellar`, `celo`, or `btc`.
+</ParamField>
+
+<ParamField query="asset" type="string">
+  Filter by asset, for example `USDC`.
+</ParamField>
+
+<ParamField query="fiat_currency" type="string">
+  Filter by fiat currency, for example `KES`.
+</ParamField>
+
+<ParamField query="payment_method" type="string">
+  Filter by `bank_account` or `phone_number`.
+</ParamField>
+
+<ParamField query="status" type="string" default="active">
+  `active`, `inactive`, or `all`.
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number to return.
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Results per page, up to `100`. `limit` is accepted as an alias.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.peerpesa.co/v1/fees?product=offramp&fiat_currency=KES" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/fees?product=offramp&fiat_currency=KES",
+  { headers: { Authorization: `Bearer ${accessToken}` } }
+);
+const { data: feeProducts, pagination } = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "fee_offramp_kes_mm",
+      "product": "offramp",
+      "name": "Offramp to KES mobile money",
+      "network": null,
+      "asset": "USDC",
+      "fiat_currency": "KES",
+      "payment_method": "phone_number",
+      "fee_currency": "USDC",
+      "percentage": "1.00",
+      "fixed": "0.00",
+      "min_fee": "0.50",
+      "max_fee": "25.00",
+      "network_fee": { "amount": "0.01", "currency": "XLM", "paid_by": "peerpesa" },
+      "limits": { "min_amount": "5.00", "max_amount": "5000.00", "currency": "USDC" },
+      "status": "active",
+      "updated_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "id": "fee_offramp_kes_bank",
+      "product": "offramp",
+      "name": "Offramp to KES bank account",
+      "network": null,
+      "asset": "USDC",
+      "fiat_currency": "KES",
+      "payment_method": "bank_account",
+      "fee_currency": "USDC",
+      "percentage": "0.75",
+      "fixed": "1.00",
+      "min_fee": "1.00",
+      "max_fee": "50.00",
+      "network_fee": { "amount": "0.01", "currency": "XLM", "paid_by": "peerpesa" },
+      "limits": { "min_amount": "10.00", "max_amount": "20000.00", "currency": "USDC" },
+      "status": "active",
+      "updated_at": "2026-10-01T00:00:00Z"
+    }
+  ],
+  "pagination": { "page": 1, "size": 20, "total": 2, "total_pages": 1 }
+}
+```
+
+<Warning>
+  The fee values in these examples are illustrative only. Always read live pricing from the API.
+</Warning>
+
+## GET /fees/\{id\}
+
+Retrieves one fee product. Returns `404` with code `not_found` if the ID does not exist.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/fees/fee_offramp_kes_mm \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+## POST /fees/calculate
+
+Calculates the fee for an amount without creating a quote or locking a rate. Use it to show a live fee preview while a user types an amount.
+
+<ParamField body="product" type="string" required>
+  Fee product, for example `offramp` or `swap`.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Transaction amount as a decimal string.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Currency of `amount`, for example `USDC`.
+</ParamField>
+
+<ParamField body="network" type="string">
+  Network: `stellar`, `celo`, or `btc`. Required for products with a network fee.
+</ParamField>
+
+<ParamField body="fiat_currency" type="string">
+  Fiat currency. Required for `onramp`, `offramp`, `buy`, and `withdraw`.
+</ParamField>
+
+<ParamField body="payment_method" type="string">
+  `bank_account` or `phone_number`. Required when pricing differs by method.
+</ParamField>
+
+<ParamField body="to_asset" type="string">
+  Target asset. Required for `swap`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/fees/calculate \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product": "offramp",
+    "amount": "100.00",
+    "currency": "USDC",
+    "network": "stellar",
+    "fiat_currency": "KES",
+    "payment_method": "phone_number"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/fees/calculate", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    product: "offramp",
+    amount: "100.00",
+    currency: "USDC",
+    network: "stellar",
+    fiat_currency: "KES",
+    payment_method: "phone_number",
+  }),
+});
+const fee = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "fee_product_id": "fee_offramp_kes_mm",
+  "product": "offramp",
+  "amount": "100.00",
+  "currency": "USDC",
+  "fee": {
+    "total": "1.00",
+    "currency": "USDC",
+    "processing_fee": "1.00",
+    "network_fee": "0.00"
+  },
+  "net_amount": "99.00",
+  "breakdown": {
+    "percentage": "1.00",
+    "percentage_fee": "1.00",
+    "fixed": "0.00",
+    "min_fee_applied": false,
+    "max_fee_applied": false
+  }
+}
+```
+
+<ResponseField name="fee" type="object">
+  Fee for this amount, in the same shape as the `fee` object on [quotes](/api-reference/quotes).
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  Amount left after fees, in `currency`.
+</ResponseField>
+
+<ResponseField name="breakdown" type="object">
+  How the processing fee was derived, including whether the minimum or maximum cap was applied.
+</ResponseField>
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `missing_parameter` | 400 | A field required for the `product` is missing, such as `fiat_currency` for `offramp`. |
+| `invalid_parameter` | 400 | Unknown `product` or a malformed `amount`. |
+| `unsupported_pair` | 422 | No active fee product for this combination of product, asset, network, and fiat currency. |
+| `amount_too_low` | 422 | `amount` is below `limits.min_amount`. |
+| `amount_too_high` | 422 | `amount` is above `limits.max_amount`. |
+| `not_found` | 404 | No fee product with this ID. |
+
+<CardGroup cols={2}>
+  <Card title="Create a quote" icon="file-invoice-dollar" href="/api-reference/quotes">
+    Lock the exact rate and fee for 30 minutes.
+  </Card>
+  <Card title="Check rates" icon="chart-line" href="/api-reference/rates">
+    Get live exchange rates before quoting.
+  </Card>
+</CardGroup>

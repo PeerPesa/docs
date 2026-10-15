@@ -10,10 +10,10 @@ PeerPesa webhooks push real-time notifications to your server when something cha
 
 <Steps>
   <Step title="Register an endpoint">
-    Create a webhook endpoint with your HTTPS URL and the events you want. PeerPesa returns a signing secret.
+    Enter your webhook URL in the dashboard. PeerPesa checks that the URL is valid and returns `200`, then gives you a webhook key.
   </Step>
   <Step title="Receive events">
-    When an event occurs, PeerPesa sends a `POST` with a JSON body and a `PeerPesa-Signature` header.
+    When an event occurs, PeerPesa sends a `POST` with a JSON body, signed with your webhook key in the `X-Signature` and `X-Timestamp` headers.
   </Step>
   <Step title="Verify and acknowledge">
     Verify the signature, return a `2xx` status within 10 seconds, then process the event asynchronously.
@@ -21,12 +21,37 @@ PeerPesa webhooks push real-time notifications to your server when something cha
 </Steps>
 
 <Note>
-  Sandbox and production have separate webhook endpoints and signing secrets. Register endpoints in each environment.
+  Sandbox and production have separate webhook URLs and separate webhook keys. Register a URL in each environment, and verify each environment's events with that environment's webhook key.
 </Note>
+
+## Set up your webhook in the dashboard
+
+<Steps>
+  <Step title="Prepare your endpoint">
+    Deploy a URL on your server that accepts `POST` requests and responds with HTTP `200`. It must be a valid, publicly reachable URL.
+  </Step>
+  <Step title="Enter the URL">
+    In the PeerPesa dashboard, open **Settings** > **Webhooks** and enter your webhook URL.
+  </Step>
+  <Step title="Pass URL validation">
+    PeerPesa validates the URL format and sends a test request to it. The URL is saved only if your endpoint returns `200`.
+  </Step>
+  <Step title="Copy your webhook key">
+    After the URL is saved, the dashboard shows your webhook key. Store it securely, for example in an environment variable such as `PEERPESA_WEBHOOK_KEY`. You use it to [verify signatures](#signature-verification).
+  </Step>
+</Steps>
+
+<Warning>
+  If the URL is malformed, unreachable, or returns anything other than `200` (including redirects, `201`, or `204`), the dashboard rejects it. Make sure your handler is live and returns `200` before you save the URL.
+</Warning>
+
+<Tip>
+  You do not have the webhook key until the URL is saved, so the validation request cannot be verified yet. Have your handler return `200` at setup, then turn on signature checks once you have stored the key.
+</Tip>
 
 ## Manage webhook endpoints
 
-You can manage endpoints in the dashboard under **Settings** > **Webhooks**, or with the API.
+Register your webhook URL and get your webhook key in the dashboard, as described above. The endpoints below let you manage webhooks with the API. The same URL rules apply: the URL must be valid and return `200`.
 
 ### POST /webhooks
 
@@ -82,14 +107,9 @@ const webhook = await res.json();
   "events": ["transaction.completed", "transaction.failed", "deposit.confirmed"],
   "description": "Production payouts",
   "status": "enabled",
-  "signing_secret": "whsec_4f8a1c9e2b...",
   "created_at": "2026-10-15T05:00:00Z"
 }
 ```
-
-<Warning>
-  `signing_secret` is returned only when the endpoint is created. Store it securely. You can roll it later with `POST /webhooks/{id}/roll-secret`.
-</Warning>
 
 ### Other endpoints
 
@@ -99,9 +119,8 @@ const webhook = await res.json();
 | `GET` | `/webhooks/{id}` | Retrieve one endpoint |
 | `PATCH` | `/webhooks/{id}` | Update `url`, `events`, `description`, or `status` (`enabled` / `disabled`) |
 | `DELETE` | `/webhooks/{id}` | Delete an endpoint. Returns `204` |
-| `POST` | `/webhooks/{id}/roll-secret` | Generate a new signing secret. The old one stays valid for 24 hours |
 | `POST` | `/webhooks/{id}/test` | Send a `webhook.test` event to the endpoint |
-| `GET` | `/webhooks/{id}/deliveries` | List recent delivery attempts with status codes |
+| `GET` | `/webhooks/{id}/deliveries` | List recent delivery attempts with status codes. Supports [pagination and filters](/pagination) |
 
 ## Event types
 
@@ -152,7 +171,8 @@ const webhook = await res.json();
 | `recurring_payment.run_failed` | A scheduled run failed, for example `insufficient_balance` |
 | `recurring_payment.paused` | A recurring payment was paused manually or after repeated failures |
 | `recurring_payment.completed` | The final scheduled run finished |
-| `recurring_payment.cancelled` | A recurring payment was cancelled |
+| `recurring_payment.restarted` | A paused recurring payment was restarted |
+| `recurring_payment.deleted` | A recurring payment was deleted |
 
 ## Event payload
 
@@ -187,52 +207,120 @@ Every event uses the same envelope. `data.object` contains the full resource at 
 <ResponseField name="livemode" type="boolean">`true` for production, `false` for sandbox.</ResponseField>
 <ResponseField name="data.object" type="object">The resource the event describes.</ResponseField>
 
-## Verify signatures
+## Signature verification
 
-Each request includes a `PeerPesa-Signature` header in the form `t=<timestamp>,v1=<signature>`. The signature is an HMAC-SHA256 of `<timestamp>.<raw request body>` using your signing secret.
+Every webhook PeerPesa sends is signed so you can confirm it came from PeerPesa and was not modified in transit. Signed webhooks include two headers:
+
+| Header | Value |
+| --- | --- |
+| `X-Signature` | HMAC-SHA256 hex digest |
+| `X-Timestamp` | Unix timestamp in milliseconds |
+
+The signature is computed with the webhook key shown in the dashboard after you saved your webhook URL:
+
+```text Signature formula
+HMAC-SHA256(key = webhook_key, data = "<X-Timestamp>.<JSON body>")
+```
+
+For example, if `X-Timestamp` is `1784784828000` and the body is `{"id":"evt_2p9x4m",...}`, the signed string is `1784784828000.{"id":"evt_2p9x4m",...}`.
 
 <Steps>
-  <Step title="Parse the header">
-    Split the header on `,` to get `t` (Unix timestamp) and `v1` (hex signature).
+  <Step title="Read the headers">
+    Get `X-Signature` and `X-Timestamp` from the request. Reject the request if either is missing.
+  </Step>
+  <Step title="Build the signed string">
+    Join the `X-Timestamp` value, a period (`.`), and the raw JSON request body exactly as received.
   </Step>
   <Step title="Compute the expected signature">
-    Build the string `t + "." + rawBody` and compute HMAC-SHA256 with your signing secret.
+    Compute HMAC-SHA256 of the signed string using your webhook key, and hex-encode the result.
   </Step>
   <Step title="Compare and check freshness">
-    Compare signatures with a constant-time function and reject events whose timestamp is older than 5 minutes.
+    Compare your result with `X-Signature` using a constant-time comparison. Reject events whose `X-Timestamp` is more than 5 minutes from your server time to block replayed requests.
   </Step>
 </Steps>
+
+<CodeGroup>
 
 ```javascript Node.js (Express)
 import crypto from "crypto";
 import express from "express";
 
 const app = express();
+const WEBHOOK_KEY = process.env.PEERPESA_WEBHOOK_KEY;
+const TOLERANCE_MS = 5 * 60 * 1000;
 
 app.post("/peerpesa/webhooks", express.raw({ type: "application/json" }), (req, res) => {
-  const header = req.get("PeerPesa-Signature") || "";
-  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const signature = req.get("X-Signature");
+  const timestamp = req.get("X-Timestamp");
+  if (!signature || !timestamp) return res.status(400).send("Missing signature");
+
+  // Reject old or replayed requests (timestamp is in milliseconds)
+  if (Math.abs(Date.now() - Number(timestamp)) > TOLERANCE_MS) {
+    return res.status(400).send("Stale timestamp");
+  }
+
+  const rawBody = req.body.toString("utf8");
   const expected = crypto
-    .createHmac("sha256", process.env.PEERPESA_WEBHOOK_SECRET)
-    .update(`${parts.t}.${req.body}`)
+    .createHmac("sha256", WEBHOOK_KEY)
+    .update(`${timestamp}.${rawBody}`)
     .digest("hex");
 
   const valid =
-    parts.v1 &&
-    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1)) &&
-    Math.abs(Date.now() / 1000 - Number(parts.t)) < 300;
+    expected.length === signature.length &&
+    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 
-  if (!valid) return res.status(400).send("Invalid signature");
+  if (!valid) return res.status(401).send("Invalid signature");
 
-  const event = JSON.parse(req.body);
+  const event = JSON.parse(rawBody);
   res.sendStatus(200); // acknowledge first
   handleEvent(event);  // then process asynchronously
 });
 ```
 
+```python Python (Flask)
+import hashlib
+import hmac
+import os
+import time
+
+from flask import Flask, abort, request
+
+app = Flask(__name__)
+WEBHOOK_KEY = os.environ["PEERPESA_WEBHOOK_KEY"].encode()
+TOLERANCE_MS = 5 * 60 * 1000
+
+@app.post("/peerpesa/webhooks")
+def peerpesa_webhook():
+    signature = request.headers.get("X-Signature")
+    timestamp = request.headers.get("X-Timestamp")
+    if not signature or not timestamp:
+        abort(400)
+
+    if abs(time.time() * 1000 - int(timestamp)) > TOLERANCE_MS:
+        abort(400)
+
+    raw_body = request.get_data(as_text=True)
+    expected = hmac.new(
+        WEBHOOK_KEY, f"{timestamp}.{raw_body}".encode(), hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected, signature):
+        abort(401)
+
+    event = request.get_json()
+    # process the event asynchronously
+    return "", 200
+```
+
+</CodeGroup>
+
 <Warning>
-  Verify against the raw request body. Parsing and re-serializing the JSON changes the bytes and breaks the signature.
+  Sign the raw request body exactly as received. Parsing and re-serializing the JSON changes spacing and key order, which produces a different signature.
 </Warning>
+
+<Note>
+  The webhook key is separate from your API keys. Never use it to authenticate API requests, and never expose it in client-side code. If you change your webhook URL or the key is regenerated in the dashboard, update the key in your handler.
+</Note>
 
 ## Retries and best practices
 

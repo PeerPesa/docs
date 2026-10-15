@@ -231,10 +231,10 @@ Adds a Lightning address or invoice to a Bitcoin wallet.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/wallets` | List wallets. Filter with `network` and paginate with `limit` and `cursor` |
+| `GET` | `/wallets` | List wallets. Filter with `network`, `search`, `start_date`, `end_date`; paginate with `page` and `size` |
 | `GET` | `/wallets/{id}` | Retrieve a wallet with its Lightning addresses |
-| `GET` | `/wallets/{id}/deposits` | List deposits received by the wallet |
-| `GET` | `/wallets/{id}/lightning` | List Lightning addresses and invoices on a Bitcoin wallet |
+| `GET` | `/wallets/{id}/deposits` | List deposits received by the wallet. Supports [pagination and filters](/pagination) |
+| `GET` | `/wallets/{id}/lightning` | List Lightning addresses and invoices on a Bitcoin wallet. Supports [pagination and filters](/pagination) |
 | `DELETE` | `/wallets/{id}/lightning/{lightning_id}` | Disable a Lightning address |
 | `PATCH` | `/wallets/{id}` | Update `label` or set `status` to `disabled` |
 

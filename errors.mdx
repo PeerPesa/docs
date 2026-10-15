@@ -70,6 +70,8 @@ Every failed PeerPesa API request returns an HTTP status code and a JSON body wi
 | `invalid_request` | 400 | Body or query is malformed | Check field types and JSON syntax |
 | `missing_parameter` | 400 | A required field is absent | Add the field named in `param` |
 | `invalid_parameter` | 400 | A field has an invalid value | Correct the field named in `param` |
+| `invalid_date_range` | 400 | `end_date` is before `start_date` | Swap or correct the dates |
+| `order_not_found` | 404 | No order with this `order_id` exists for your account | Check the `order_id` from `GET /orders` |
 | `not_found` | 404 | Resource ID does not exist | Verify the ID and environment |
 | `idempotency_conflict` | 409 | Same `Idempotency-Key` reused with a different body | Use a new key for a new request |
 

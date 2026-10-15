@@ -26,7 +26,8 @@
             "group": "Reference",
             "pages": [
               "webhooks",
-              "errors"
+              "errors",
+              "pagination"
             ]
           }
         ]
@@ -39,7 +40,8 @@
             "pages": [
               "api-reference/network-stats",
               "api-reference/coins",
-              "api-reference/rates"
+              "api-reference/rates",
+              "api-reference/fees"
             ]
           },
           {
@@ -66,6 +68,7 @@
             "group": "Account & Records",
             "pages": [
               "api-reference/profile",
+              "api-reference/orders",
               "api-reference/transactions",
               "api-reference/beneficiaries"
             ]

@@ -1,0 +1,159 @@
+---
+title: "Paginate, search, and filter PeerPesa list endpoints"
+sidebarTitle: "Pagination & Filters"
+description: "Use page, size, limit, search, start_date, end_date, sort, and status query parameters to page through and filter PeerPesa orders, transactions, and other lists."
+---
+
+Every PeerPesa list endpoint, including orders and transaction histories, shares the same query parameters for paging, searching, date filtering, and sorting. Combine them freely: for example, page 2 of successful swaps from July 2026 that mention a wallet address. Each endpoint page also lists the extra filters specific to it.
+
+## Common query parameters
+
+### Pagination
+
+<ParamField query="page" type="integer" default="1">
+  Page number to return, starting at `1`. Requesting a page beyond `total_pages` returns an empty `data` array.
+</ParamField>
+
+<ParamField query="size" default="20" type="integer">
+  Number of items per page. Maximum is `100`. Larger values return `invalid_parameter`.
+</ParamField>
+
+<ParamField query="limit" default="20" type="integer">
+  Alias for `size`, accepted for compatibility. If you send both, `size` is used.
+</ParamField>
+
+### Search
+
+<ParamField query="search" type="string">
+  Free-text search, case-insensitive. Matches IDs and reference numbers (such as `order_id` or `transaction_id`), wallet addresses, `tx_hash`, asset symbols, account numbers, and names, depending on the endpoint. Minimum 2 characters.
+</ParamField>
+
+### Date range
+
+<ParamField query="start_date" type="string">
+  Only include items created on or after this date. Accepts `YYYY-MM-DD` (start of day, UTC) or a full ISO 8601 timestamp.
+</ParamField>
+
+<ParamField query="end_date" type="string">
+  Only include items created on or before this date. Accepts `YYYY-MM-DD` (end of day, UTC) or a full ISO 8601 timestamp. Must be on or after `start_date`.
+</ParamField>
+
+### Sorting
+
+<ParamField query="sort_by" default="created_at" type="string">
+  Field to sort by: `created_at`, `updated_at`, or `amount` (where the list has amounts).
+</ParamField>
+
+<ParamField query="sort_order" default="desc" type="string">
+  `desc` for newest or largest first, `asc` for oldest or smallest first.
+</ParamField>
+
+### Status
+
+<ParamField query="status" type="string">
+  Filter by status. Accepts one value or a comma-separated list, for example `status=successful,pending`. Valid values depend on the endpoint.
+</ParamField>
+
+## Response format
+
+```json Response
+{
+  "data": [
+    { "order_id": "22573706304032", "order_type": "swap", "status": "successful" }
+  ],
+  "pagination": {
+    "page": 2,
+    "size": 20,
+    "total": 134,
+    "total_pages": 7
+  }
+}
+```
+
+<ResponseField name="data" type="object[]">
+  Items on the current page that match your filters.
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">Current page number.</ResponseField>
+    <ResponseField name="size" type="integer">Items per page used for this response.</ResponseField>
+    <ResponseField name="total" type="integer">Total number of items matching your filters, across all pages.</ResponseField>
+    <ResponseField name="total_pages" type="integer">Total number of pages. `0` when there are no results.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+
+```bash Search and date range
+curl -G "https://api.peerpesa.co/v1/orders" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --data-urlencode "search=0x15cb5Ab9" \
+  --data-urlencode "start_date=2026-07-01" \
+  --data-urlencode "end_date=2026-07-31" \
+  --data-urlencode "status=successful" \
+  --data-urlencode "page=1" \
+  --data-urlencode "size=20"
+```
+
+```bash Sort by amount
+curl "https://api.peerpesa.co/v1/transactions?sort_by=amount&sort_order=desc&size=10" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript Fetch every page
+async function fetchAll(path, params, accessToken) {
+  const items = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const query = new URLSearchParams({ ...params, page, size: 100 });
+    const res = await fetch(`https://api.peerpesa.co/v1${path}?${query}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const { data, pagination } = await res.json();
+    items.push(...data);
+    totalPages = pagination.total_pages;
+    page += 1;
+  } while (page <= totalPages);
+
+  return items;
+}
+
+const julySwaps = await fetchAll(
+  "/orders",
+  { order_type: "swap", start_date: "2026-07-01", end_date: "2026-07-31" },
+  accessToken
+);
+```
+
+</CodeGroup>
+
+<Tip>
+  New items can arrive while you page through results, which may shift items between pages. For reconciliation, always set a fixed `end_date` so the result set does not change while you read it.
+</Tip>
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `invalid_parameter` | 400 | `size` or `limit` above `100`, `page` below `1`, `search` shorter than 2 characters, an unknown `sort_by` field, or a malformed date. The `param` field names the parameter. |
+| `invalid_date_range` | 400 | `end_date` is before `start_date`. |
+
+## Endpoints that support these parameters
+
+| Endpoint | Lists | Extra filters |
+| --- | --- | --- |
+| [`GET /orders`](/api-reference/orders) | Orders with their on-chain transactions | `order_type`, `asset`, `network`, `fiat_currency`, `recurring_payment` |
+| [`GET /transactions`](/api-reference/transactions) | All transactions | `type`, `network`, `recurring_payment_id` |
+| [`GET /recurring-payments`](/api-reference/recurring-payments) | Recurring payment schedules | `type` |
+| [`GET /recurring-payments/{id}/transactions`](/api-reference/recurring-payments) | Transactions created by one schedule | None |
+| [`GET /fees`](/api-reference/fees) | Fee products | `product`, `network`, `asset`, `fiat_currency`, `payment_method` |
+| [`GET /beneficiaries`](/api-reference/beneficiaries) | Saved beneficiaries | `type`, `country`, `fiat_currency`, `network` |
+| [`GET /wallets`](/api-reference/deposit-wallets) | Deposit wallets | `network` |
+| [`GET /wallets/{id}/deposits`](/api-reference/deposit-wallets) | Deposits received by a wallet | None |
+| [`GET /wallets/{id}/lightning`](/api-reference/deposit-wallets) | Lightning addresses and invoices | None |
+| [`GET /webhooks/{id}/deliveries`](/webhooks) | Webhook delivery attempts | None |
