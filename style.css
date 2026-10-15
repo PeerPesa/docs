@@ -1,0 +1,13 @@
+/* Larger, more visible navbar logo */
+img.nav-logo {
+  height: 2.75rem !important;
+  width: auto !important;
+  max-width: 240px !important;
+}
+
+@media (max-width: 768px) {
+  img.nav-logo {
+    height: 2.25rem !important;
+    max-width: 180px !important;
+  }
+}
