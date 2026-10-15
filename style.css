@@ -1,3 +1,22 @@
+/* Wider sidebar (Luma default is 14rem) */
+:root {
+  --sidebar-width: 19rem;
+}
+
+/* Keep sidebar labels on a single line */
+#sidebar-content li a,
+#sidebar-content li button,
+.sidebar-group-header {
+  white-space: nowrap;
+}
+
+#sidebar-content li a > div,
+#sidebar-content li button > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Larger, more visible navbar logo */
 img.nav-logo {
   height: 2.75rem !important;
