@@ -36,41 +36,54 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "Network",
+            "group": "API Reference",
             "pages": [
-              "api-reference/network-stats",
-              "api-reference/coins",
-              "api-reference/rates",
-              "api-reference/fees"
-            ]
-          },
-          {
-            "group": "Ramps",
-            "pages": [
-              "api-reference/quotes",
-              "api-reference/onramp",
-              "api-reference/offramp"
-            ]
-          },
-          {
-            "group": "Wallet Operations",
-            "pages": [
-              "api-reference/balances",
-              "api-reference/deposit-wallets",
-              "api-reference/withdraw",
-              "api-reference/send",
-              "api-reference/buy",
-              "api-reference/swap",
-              "api-reference/recurring-payments"
-            ]
-          },
-          {
-            "group": "Account & Records",
-            "pages": [
-              "api-reference/profile",
-              "api-reference/orders",
-              "api-reference/transactions",
-              "api-reference/beneficiaries"
+              {
+                "group": "Network",
+                "icon": "globe",
+                "expanded": true,
+                "pages": [
+                  "api-reference/network-stats",
+                  "api-reference/coins",
+                  "api-reference/rates",
+                  "api-reference/fees"
+                ]
+              },
+              {
+                "group": "Ramps",
+                "icon": "arrow-right-arrow-left",
+                "expanded": false,
+                "pages": [
+                  "api-reference/quotes",
+                  "api-reference/onramp",
+                  "api-reference/offramp"
+                ]
+              },
+              {
+                "group": "Wallet Operations",
+                "icon": "wallet",
+                "expanded": false,
+                "pages": [
+                  "api-reference/balances",
+                  "api-reference/deposit-wallets",
+                  "api-reference/withdraw",
+                  "api-reference/send",
+                  "api-reference/buy",
+                  "api-reference/swap",
+                  "api-reference/recurring-payments"
+                ]
+              },
+              {
+                "group": "Account & Records",
+                "icon": "user",
+                "expanded": false,
+                "pages": [
+                  "api-reference/profile",
+                  "api-reference/orders",
+                  "api-reference/order-details",
+                  "api-reference/beneficiaries"
+                ]
+              }
             ]
           }
         ]

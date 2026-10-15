@@ -99,7 +99,7 @@ curl -G "https://api.peerpesa.co/v1/orders" \
 ```
 
 ```bash Sort by amount
-curl "https://api.peerpesa.co/v1/transactions?sort_by=amount&sort_order=desc&size=10" \
+curl "https://api.peerpesa.co/v1/orders?sort_by=amount&sort_order=desc&size=10" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -148,7 +148,6 @@ const julySwaps = await fetchAll(
 | Endpoint | Lists | Extra filters |
 | --- | --- | --- |
 | [`GET /orders`](/api-reference/orders) | Orders with their on-chain transactions | `order_type`, `asset`, `network`, `fiat_currency`, `recurring_payment` |
-| [`GET /transactions`](/api-reference/transactions) | All transactions | `type`, `network`, `recurring_payment_id` |
 | [`GET /recurring-payments`](/api-reference/recurring-payments) | Recurring payment schedules | `type` |
 | [`GET /recurring-payments/{id}/transactions`](/api-reference/recurring-payments) | Transactions created by one schedule | None |
 | [`GET /fees`](/api-reference/fees) | Fee products | `product`, `network`, `asset`, `fiat_currency`, `payment_method` |

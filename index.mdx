@@ -39,8 +39,8 @@ PeerPesa is a stablecoin on and off-ramp for Africa. Use the API to let users ex
     Convert crypto to fiat and pay a beneficiary.
   </Card>
 
-  <Card title="Transactions" icon="list" href="/api-reference/transactions">
-    List and retrieve ramp transaction records.
+  <Card title="Orders" icon="list" href="/api-reference/orders">
+    List orders and retrieve order details with transaction legs.
   </Card>
 
   <Card title="Beneficiaries" icon="users" href="/api-reference/beneficiaries">
@@ -60,8 +60,8 @@ PeerPesa is a stablecoin on and off-ramp for Africa. Use the API to let users ex
   <Step title="Confirm the quote">
     Call [POST /quotes/\{id\}/confirm](/api-reference/quotes) with the receiving wallet for an [onramp](/api-reference/onramp), or a saved beneficiary for an [offramp](/api-reference/offramp).
   </Step>
-  <Step title="Track the transaction">
-    Use [GET /transactions/\{id\}](/api-reference/transactions) to follow status from payment/deposit through completion.
+  <Step title="Track the order">
+    Use [GET /orders/\{order_id\}](/api-reference/order-details) to follow status from payment/deposit through completion.
   </Step>
 </Steps>
 
