@@ -384,7 +384,7 @@ console.log(data);
 ```
 
 <Note>
-  After execution, complete the payment using the returned instructions. Your balance is credited once the payment is received. Track progress with [GET /transactions/](/api-reference/transactions){id} or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
+  After execution, complete the payment using the returned instructions. Your balance is credited once the payment is received. Track progress with [GET /orders/\{order_id\}](/api-reference/order-details) or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
 </Note>
 
 ---
@@ -419,6 +419,6 @@ console.log(data);
     Follow the `payment_instructions` in the response. Bank transfers require the provided reference.
   </Step>
   <Step title="Track completion">
-    Poll [GET /transactions/](/api-reference/transactions){id} or wait for [webhook](/webhooks) events.
+    Poll [GET /orders/\{order_id\}](/api-reference/order-details) or wait for [webhook](/webhooks) events.
   </Step>
 </Steps>

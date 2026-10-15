@@ -17,7 +17,7 @@ An onramp converts local fiat into cryptocurrency. After you create a quote that
     Call `POST /quotes/{id}/confirm` with the destination `wallet_address` and payer details. You receive a transaction in status `awaiting_payment` with `payment_instructions`.
   </Step>
   <Step title="Track the transaction">
-    Poll [GET /transactions/\{id\}](/api-reference/transactions) or wait for webhooks. Status flows from `awaiting_payment` to `processing`, then `completed` or `failed`.
+    Poll [GET /orders/\{order_id\}](/api-reference/order-details) or wait for webhooks. Status flows from `awaiting_payment` to `processing`, then `completed` or `failed`.
   </Step>
 </Steps>
 
@@ -190,5 +190,5 @@ console.log(data);
 </ResponseField>
 
 <Note>
-  After creation, the transaction status is `awaiting_payment`. Crypto is sent to `wallet_address` once fiat is received. Track progress with [GET /transactions/\{id\}](/api-reference/transactions).
+  After creation, the transaction status is `awaiting_payment`. Crypto is sent to `wallet_address` once fiat is received. Track progress with [GET /orders/\{order_id\}](/api-reference/order-details).
 </Note>

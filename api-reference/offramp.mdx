@@ -22,7 +22,7 @@ An offramp converts crypto on Stellar or Celo into local fiat and pays it to a s
     Send exactly `deposit.amount` of `deposit.asset` to `deposit.address` before `deposit.deposit_by`. On Stellar, include `deposit.memo`.
   </Step>
   <Step title="Track the payout">
-    Poll [GET /transactions/\{id\}](/api-reference/transactions) until the status is `completed`.
+    Poll [GET /orders/\{order_id\}](/api-reference/order-details) until the status is `completed`.
   </Step>
 </Steps>
 
@@ -118,7 +118,7 @@ const transaction = await res.json();
 ```
 
 <ResponseField name="status" type="string">
-  Starts as `awaiting_deposit`, then moves to `processing` and `completed`. See [transaction statuses](/api-reference/transactions).
+  Starts as `awaiting_deposit`, then moves to `processing` and `completed`. See [order details](/api-reference/order-details).
 </ResponseField>
 
 <ResponseField name="fee" type="object">

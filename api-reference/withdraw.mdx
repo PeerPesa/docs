@@ -47,7 +47,7 @@ Before you withdraw, make sure you have:
     Call `POST /wallet/withdraw` with the `quote_id`. The response returns a wallet transaction with `status` set to `processing`.
   </Step>
   <Step title="Track the transaction">
-    Poll [GET /transactions/](/api-reference/transactions){id} or listen for webhook events (`transaction.processing`, `transaction.completed`, `transaction.failed`).
+    Poll [GET /orders/\{order_id\}](/api-reference/order-details) or listen for webhook events (`transaction.processing`, `transaction.completed`, `transaction.failed`).
   </Step>
 </Steps>
 
@@ -278,7 +278,7 @@ console.log(transaction);
 The response is a wallet transaction object with additional withdrawal-specific fields.
 
 <ResponseField name="id" type="string">
-  The wallet transaction ID. Use it to poll [GET /transactions/](/api-reference/transactions){id}.
+  The wallet transaction ID. Use it to poll [GET /orders/\{order_id\}](/api-reference/order-details).
 </ResponseField>
 
 <ResponseField name="type" type="string">
@@ -384,7 +384,7 @@ The response is a wallet transaction object with additional withdrawal-specific 
 
 After executing a withdrawal, monitor its progress using one of the following methods:
 
-- Poll [GET /transactions/](/api-reference/transactions){id} with the transaction ID.
+- Poll [GET /orders/\{order_id\}](/api-reference/order-details) with the transaction ID.
 - Listen for [webhook](/webhooks) events:
   - `transaction.processing` — the withdrawal has been accepted and is being settled.
   - `transaction.completed` — the fiat funds have been delivered to the beneficiary.

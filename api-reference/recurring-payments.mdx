@@ -319,7 +319,7 @@ const recurring = await res.json();
 
 ## How runs execute
 
-At each run time, PeerPesa creates a quote, confirms it, and debits your balance. The result is a normal [transaction](/api-reference/transactions) with `recurring_payment_id` set.
+At each run time, PeerPesa creates a quote, confirms it, and debits your balance. The result is a normal [order](/api-reference/orders) with `recurring_payment` set to the schedule ID.
 
 - If the balance is too low, the run fails with `insufficient_balance` and is not retried.
 - After 3 failed runs in a row, the recurring payment is set to `paused`.
@@ -436,7 +436,7 @@ const recurring = await res.json();
 
 **DELETE** `/recurring-payments/{id}`
 
-Deletes a recurring payment. No further runs execute and it can no longer be restarted. Transactions from past runs are kept and stay available through the transactions endpoint below and [GET /transactions](/api-reference/transactions).
+Deletes a recurring payment. No further runs execute and it can no longer be restarted. Transactions from past runs are kept and stay available through the transactions endpoint below and [GET /orders](/api-reference/orders).
 
 <ParamField path="id" type="string" required>
   Recurring payment ID.
@@ -605,7 +605,7 @@ const { data, pagination, summary } = await res.json();
   Page details: `page`, `size`, `total`, and `total_pages`. The `summary` totals always cover all runs, not just the current page.
 </ResponseField>
 
-Each item is a full [transaction](/api-reference/transactions). You can also filter all transactions with `GET /transactions?recurring_payment_id=rp_5t8w2k`.
+Each item is a transaction like those in the [order object](/api-reference/order-details). You can also list the orders a schedule created with `GET /orders?recurring_payment=rp_5t8w2k`.
 
 ## Other endpoints
 

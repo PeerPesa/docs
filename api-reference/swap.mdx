@@ -457,6 +457,6 @@ When you request a quote, you set a `slippage` tolerance as a percentage. If the
     Call `POST /wallet/swap` with the `quote_id`. No additional balance checks are needed.
   </Step>
   <Step title="Track completion">
-    Poll [GET /transactions/](/api-reference/transactions){id} or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
+    Poll [GET /orders/\{order_id\}](/api-reference/order-details) or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
   </Step>
 </Steps>

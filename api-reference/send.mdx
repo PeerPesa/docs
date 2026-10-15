@@ -347,7 +347,7 @@ Follow these steps to send cryptocurrency to an external wallet address.
     Call `POST /wallet/send/estimate` with the same parameters you plan to use for the send so you know the exact fee and net amount before committing.
   </Step>
   <Step title="Execute the send">
-    Call `POST /wallet/send` with the destination `type` set to `address`, the recipient `address`, and a `memo` if required. Save the returned `id` and poll <a href="/api-reference/transactions">GET /transactions/{id}</a> or listen to webhooks to track status.
+    Call `POST /wallet/send` with the destination `type` set to `address`, the recipient `address`, and a `memo` if required. Save the returned `id` and poll <a href="/api-reference/order-details">GET /orders/\{order_id}</a> or listen to webhooks to track status.
   </Step>
 </Steps>
 
@@ -624,7 +624,7 @@ After creating a send, track its status by polling or listening to webhooks.
 
 <Steps>
   <Step title="Poll the transaction">
-    Use <a href="/api-reference/transactions">GET /transactions/{id}</a> with the `id` from the send response.
+    Use <a href="/api-reference/order-details">GET /orders/\{order_id}</a> with the `id` from the send response.
   </Step>
   <Step title="Listen to webhooks">
     Configure your webhook endpoint to receive <a href="/webhooks">transaction events</a>:
