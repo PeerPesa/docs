@@ -1,0 +1,199 @@
+---
+title: "Beneficiaries: manage offramp payout recipients"
+sidebarTitle: "Beneficiaries"
+description: "Create, list, retrieve, and delete beneficiaries, the mobile money wallets and bank accounts that receive fiat payouts from PeerPesa offramps."
+---
+
+A beneficiary is a saved payout recipient for offramps: a mobile money wallet or bank account in a supported country. Create a beneficiary once, then reference its `beneficiary_id` in every [offramp](/api-reference/offramp) to that recipient.
+
+## The beneficiary object
+
+<ResponseField name="id" type="string">
+  Unique identifier, for example `ben_3m7q2c`.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Recipient's full name.
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  ISO 3166-1 alpha-2 country code, for example `KE`.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string">
+  Payout currency: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`.
+</ResponseField>
+
+<ResponseField name="method" type="string">
+  `mobile_money` or `bank_transfer`.
+</ResponseField>
+
+<ResponseField name="details" type="object">
+  Mobile money or bank details, depending on `method`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+## POST /beneficiaries
+
+Creates a beneficiary.
+
+<ParamField body="name" type="string" required>
+  Recipient's full name.
+</ParamField>
+
+<ParamField body="country" type="string" required>
+  ISO 3166-1 alpha-2 country code.
+</ParamField>
+
+<ParamField body="fiat_currency" type="string" required>
+  Payout currency for this recipient.
+</ParamField>
+
+<ParamField body="method" type="string" required>
+  `mobile_money` or `bank_transfer`. Must be supported for the currency.
+</ParamField>
+
+<ParamField body="mobile_money" type="object">
+  Required when `method` is `mobile_money`.
+
+  <Expandable title="properties">
+    <ParamField body="phone_number" type="string" required>
+      Phone number in international format, for example `+254712345678`.
+    </ParamField>
+
+    <ParamField body="provider" type="string" required>
+      Mobile money provider, for example `mpesa`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="bank_transfer" type="object">
+  Required when `method` is `bank_transfer`.
+
+  <Expandable title="properties">
+    <ParamField body="bank_code" type="string" required>
+      Recipient bank's code.
+    </ParamField>
+
+    <ParamField body="account_number" type="string" required>
+      Recipient's account number.
+    </ParamField>
+
+    <ParamField body="account_name" type="string" required>
+      Name on the bank account.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<Tabs>
+  <Tab title="Mobile money">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Amina Otieno",
+        "country": "KE",
+        "fiat_currency": "KES",
+        "method": "mobile_money",
+        "mobile_money": { "phone_number": "+254712345678", "provider": "mpesa" }
+      }'
+    ```
+  </Tab>
+  <Tab title="Bank transfer">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Chinedu Okafor",
+        "country": "NG",
+        "fiat_currency": "NGN",
+        "method": "bank_transfer",
+        "bank_transfer": {
+          "bank_code": "058",
+          "account_number": "0123456789",
+          "account_name": "Chinedu Okafor"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+```json Response
+{
+  "id": "ben_3m7q2c",
+  "name": "Amina Otieno",
+  "country": "KE",
+  "fiat_currency": "KES",
+  "method": "mobile_money",
+  "details": { "phone_number": "+254712345678", "provider": "mpesa" },
+  "created_at": "2026-10-15T05:00:00Z"
+}
+```
+
+## GET /beneficiaries
+
+Lists beneficiaries, newest first.
+
+<ParamField query="limit" default="20" type="integer">
+  Number of results, up to `100`.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Value of `next_cursor` from the previous page.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.peerpesa.co/v1/beneficiaries?limit=20" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/beneficiaries?limit=20", {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const { data, next_cursor } = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "ben_3m7q2c",
+      "name": "Amina Otieno",
+      "country": "KE",
+      "fiat_currency": "KES",
+      "method": "mobile_money",
+      "details": { "phone_number": "+254712345678", "provider": "mpesa" },
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+## GET /beneficiaries/\{id\}
+
+Retrieves one beneficiary. Returns `404` with code `not_found` if the ID does not exist.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+## DELETE /beneficiaries/\{id\}
+
+Deletes a beneficiary. Returns `204 No Content` on success. Past transactions to this beneficiary are not affected.
+
+```bash cURL
+curl -X DELETE https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```

@@ -1,0 +1,351 @@
+---
+title: "Schedule recurring payments to beneficiaries and wallets"
+sidebarTitle: "Recurring Payments"
+description: "Set up recurring PeerPesa payouts in three steps: basic info, schedule, and review. Pay beneficiaries or wallets daily, weekly, or monthly from your balance."
+---
+
+Recurring payments let you pay the same beneficiary or wallet on a fixed schedule from your PeerPesa balance, for example a monthly KES salary to an M-Pesa number or a weekly USDC transfer to a Stellar address. Setup follows three steps: **Basic Info** (who, what, and how much), **Schedule** (when and how often), and **Review** (check upcoming runs and fees, then activate).
+
+<Steps>
+  <Step title="Basic Info">
+    Create a draft with `POST /recurring-payments`: name, payment type, source coin and network, amount, and recipient.
+  </Step>
+  <Step title="Schedule">
+    Set frequency, start date, run time, and when it ends with `PUT /recurring-payments/{id}/schedule`.
+  </Step>
+  <Step title="Review">
+    Call `GET /recurring-payments/{id}/review` to see the next run dates, estimated fees, and balance check. Then activate with `POST /recurring-payments/{id}/activate`.
+  </Step>
+</Steps>
+
+<Note>
+  Rates are not locked for recurring payments. Each run creates a fresh [quote](/api-reference/quotes) at execution time and confirms it automatically, so the fee and rate shown in Review are estimates.
+</Note>
+
+## Statuses
+
+| Status | Meaning |
+| --- | --- |
+| `draft` | Basic info saved; schedule or activation still pending. |
+| `active` | Runs execute on schedule. |
+| `paused` | No runs execute until resumed. Set manually or after 3 failed runs in a row. |
+| `completed` | The last scheduled run finished. |
+| `cancelled` | Stopped permanently. |
+
+## Step 1: Basic Info
+
+**POST** `/recurring-payments`
+
+Creates a recurring payment in `draft` status.
+
+<ParamField body="name" type="string" required>
+  Label shown in your dashboard, for example `"Monthly rent"`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  `withdraw` (pay fiat to a beneficiary, see [Withdraw](/api-reference/withdraw)) or `send` (send crypto to a wallet or PeerPesa user, see [Send](/api-reference/send)).
+</ParamField>
+
+<ParamField body="source" type="object" required>
+  Balance to pay from.
+
+  <Expandable title="properties">
+    <ParamField body="symbol" type="string" required>Coin symbol, for example `USDC`.</ParamField>
+    <ParamField body="network" type="string" required>Network code, for example `STELLAR`. Must be `active` in [GET /currencies](/api-reference/coins).</ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount per run as a decimal string.
+</ParamField>
+
+<ParamField body="amount_currency" type="string" required>
+  Currency of `amount`: the source `symbol`, or the beneficiary's fiat code for `withdraw` (for example `KES` to pay a fixed fiat amount each run).
+</ParamField>
+
+<ParamField body="recipient" type="object" required>
+  Who gets paid.
+
+  <Expandable title="properties">
+    <ParamField body="beneficiary_id" type="string">Required for `withdraw`. A saved [beneficiary](/api-reference/beneficiaries).</ParamField>
+    <ParamField body="destination" type="object">Required for `send`. Same shape as the `destination` object on [Send](/api-reference/send).</ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="description" type="string">
+  Note attached to every payment, shown to the recipient where the method supports it.
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Your own identifier. Each run's transaction gets `reference` plus a run number suffix, for example `rent-2026-003`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/recurring-payments \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Monthly rent",
+    "type": "withdraw",
+    "source": { "symbol": "USDC", "network": "STELLAR" },
+    "amount": "25000.00",
+    "amount_currency": "KES",
+    "recipient": { "beneficiary_id": "ben_3m7q2c" },
+    "description": "Rent for Apt 4B",
+    "reference": "rent-2026"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/recurring-payments", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "Monthly rent",
+    type: "withdraw",
+    source: { symbol: "USDC", network: "STELLAR" },
+    amount: "25000.00",
+    amount_currency: "KES",
+    recipient: { beneficiary_id: "ben_3m7q2c" },
+    description: "Rent for Apt 4B",
+    reference: "rent-2026",
+  }),
+});
+const recurring = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "name": "Monthly rent",
+  "type": "withdraw",
+  "status": "draft",
+  "source": { "symbol": "USDC", "network": "STELLAR" },
+  "amount": "25000.00",
+  "amount_currency": "KES",
+  "recipient": { "beneficiary_id": "ben_3m7q2c" },
+  "description": "Rent for Apt 4B",
+  "reference": "rent-2026",
+  "schedule": null,
+  "created_at": "2026-10-15T08:00:00Z"
+}
+```
+
+## Step 2: Schedule
+
+**PUT** `/recurring-payments/{id}/schedule`
+
+Sets when and how often the payment runs. You can call it again while the payment is `draft` or `paused`.
+
+<ParamField path="id" type="string" required>
+  Recurring payment ID, for example `rp_5t8w2k`.
+</ParamField>
+
+<ParamField body="frequency" type="string" required>
+  `daily`, `weekly`, `biweekly`, or `monthly`.
+</ParamField>
+
+<ParamField body="day_of_week" type="string">
+  Required for `weekly` and `biweekly`: `monday` to `sunday`.
+</ParamField>
+
+<ParamField body="day_of_month" type="integer">
+  Required for `monthly`: `1` to `31`. In shorter months, runs on the last day.
+</ParamField>
+
+<ParamField body="start_date" type="string" required>
+  First possible run date (`YYYY-MM-DD`). Must be today or later.
+</ParamField>
+
+<ParamField body="time" type="string" default="09:00">
+  Run time in 24-hour `HH:MM` format.
+</ParamField>
+
+<ParamField body="timezone" type="string" default="Africa/Nairobi">
+  IANA timezone for `start_date` and `time`.
+</ParamField>
+
+<ParamField body="end" type="object" required>
+  When the schedule stops. Set `type` to `never`, `on_date` (with `date`), or `after_occurrences` (with `occurrences`).
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/schedule \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "frequency": "monthly",
+    "day_of_month": 1,
+    "start_date": "2026-11-01",
+    "time": "09:00",
+    "timezone": "Africa/Nairobi",
+    "end": { "type": "after_occurrences", "occurrences": 12 }
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/schedule",
+  {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      frequency: "monthly",
+      day_of_month: 1,
+      start_date: "2026-11-01",
+      time: "09:00",
+      timezone: "Africa/Nairobi",
+      end: { type: "after_occurrences", occurrences: 12 },
+    }),
+  }
+);
+const recurring = await res.json();
+```
+
+</CodeGroup>
+
+Returns the recurring payment with its `schedule` filled in. Status stays `draft`.
+
+## Step 3: Review and activate
+
+### GET /recurring-payments/\{id\}/review
+
+Returns a summary to show the user before activation: recipient, upcoming run dates, estimated fees at current rates, and whether the balance covers the next run.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/review \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "name": "Monthly rent",
+  "type": "withdraw",
+  "recipient": {
+    "beneficiary_id": "ben_3m7q2c",
+    "name": "Jane Wanjiru",
+    "method": "mobile_money",
+    "account": "+2547****5678"
+  },
+  "per_run": {
+    "amount": "25000.00",
+    "amount_currency": "KES",
+    "estimated_rate": "129.45",
+    "estimated_source_amount": "193.13",
+    "estimated_fee": {
+      "total": "1.50",
+      "currency": "USDC",
+      "processing_fee": "1.00",
+      "network_fee": "0.50"
+    },
+    "estimated_total_debit": "194.63",
+    "source_currency": "USDC"
+  },
+  "schedule_summary": "Monthly on day 1 at 09:00 (Africa/Nairobi), 12 payments",
+  "next_runs": [
+    "2026-11-01T06:00:00Z",
+    "2026-12-01T06:00:00Z",
+    "2027-01-01T06:00:00Z"
+  ],
+  "total_runs": 12,
+  "balance_check": {
+    "available": "1250.40",
+    "covers_next_run": true
+  },
+  "warnings": []
+}
+```
+
+<ResponseField name="per_run" type="object">
+  Estimated cost of one run at current rates, including the fee breakdown and the total debited from your balance.
+</ResponseField>
+
+<ResponseField name="next_runs" type="string[]">
+  The next three run times in UTC.
+</ResponseField>
+
+<ResponseField name="balance_check" type="object">
+  Your available balance on the source coin and network, and whether it covers the next run.
+</ResponseField>
+
+<ResponseField name="warnings" type="string[]">
+  Issues to show the user, for example `insufficient_balance_for_next_run` or `amount_exceeds_monthly_limit`.
+</ResponseField>
+
+### POST /recurring-payments/\{id\}/activate
+
+Activates a reviewed draft. Status becomes `active` and `next_run_at` is set.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/activate \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch(
+  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/activate",
+  { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } }
+);
+const recurring = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "rp_5t8w2k",
+  "status": "active",
+  "next_run_at": "2026-11-01T06:00:00Z",
+  "runs_completed": 0,
+  "total_runs": 12,
+  "activated_at": "2026-10-15T08:04:00Z"
+}
+```
+
+## How runs execute
+
+At each run time, PeerPesa creates a quote, confirms it, and debits your balance. The result is a normal [transaction](/api-reference/transactions) with `recurring_payment_id` set.
+
+- If the balance is too low, the run fails with `insufficient_balance` and is not retried.
+- After 3 failed runs in a row, the recurring payment is set to `paused`.
+- You receive `recurring_payment.run_succeeded` or `recurring_payment.run_failed` [webhooks](/webhooks) for every run, and `recurring_payment.run_upcoming` 24 hours before.
+
+## Manage recurring payments
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/recurring-payments` | List recurring payments. Filter by `status` and `type`. |
+| `GET` | `/recurring-payments/{id}` | Retrieve one recurring payment. |
+| `PATCH` | `/recurring-payments/{id}` | Update basic info (`name`, `amount`, `description`). Changes apply from the next run. |
+| `POST` | `/recurring-payments/{id}/pause` | Pause an active recurring payment. |
+| `POST` | `/recurring-payments/{id}/resume` | Resume a paused one. Missed runs are skipped. |
+| `POST` | `/recurring-payments/{id}/cancel` | Cancel permanently. |
+| `GET` | `/recurring-payments/{id}/runs` | List past runs with status and `transaction_id`. |
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `invalid_schedule` | 422 | Missing `day_of_week` or `day_of_month`, or `start_date` in the past. |
+| `schedule_required` | 422 | Activation attempted before a schedule was set. |
+| `invalid_status_transition` | 409 | For example, resuming a cancelled recurring payment. |
+| `beneficiary_mismatch` | 422 | Beneficiary currency does not match `amount_currency`. |
+| `unsupported_network` | 422 | The source network is not `active`. |
+| `insufficient_balance` | 422 | A run could not be funded. |
+
+See [Error Codes](/errors) for the full list.

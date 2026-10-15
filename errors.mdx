@@ -1,0 +1,151 @@
+---
+title: "PeerPesa API error codes, HTTP statuses, and fixes"
+sidebarTitle: "Error Codes"
+description: "Full list of PeerPesa API error codes with HTTP statuses, causes, and fixes for authentication, KYC, quotes, ramps, wallets, beneficiaries, and webhooks."
+---
+
+Every failed PeerPesa API request returns an HTTP status code and a JSON body with a machine-readable `code` and a human-readable `message`. Branch your error handling on `code`, not on `message`, because messages can change. This page lists every error code by category with the fix for each.
+
+## Error format
+
+```json
+{
+  "error": {
+    "code": "quote_expired",
+    "message": "Quote qt_8f2k1x9a expired at 2026-10-15T05:30:00Z.",
+    "param": "quote_id",
+    "request_id": "req_7b2c9e4f"
+  }
+}
+```
+
+<ResponseField name="code" type="string" required>
+  Stable, machine-readable error code from the tables below.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Human-readable explanation. Do not parse it.
+</ResponseField>
+
+<ResponseField name="param" type="string">
+  The request field that caused the error, when one applies.
+</ResponseField>
+
+<ResponseField name="request_id" type="string">
+  Unique ID for the request. Include it when you contact support.
+</ResponseField>
+
+## HTTP status codes
+
+| Status | Meaning |
+| --- | --- |
+| `200` / `201` | Success |
+| `204` | Success with no response body (for example, a delete) |
+| `400` | The request is malformed or a parameter is invalid |
+| `401` | Authentication failed or the token expired |
+| `403` | Authenticated, but not allowed to perform this action |
+| `404` | The resource does not exist in this environment |
+| `409` | The request conflicts with the current state of a resource |
+| `422` | The request is valid but cannot be processed |
+| `429` | Too many requests |
+| `500` / `503` | PeerPesa or a network partner had a problem |
+
+## Error codes
+
+### Authentication and access
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `unauthorized` | 401 | Token missing, expired, or invalid | Request a new token with [POST /auth/token](/authentication) |
+| `invalid_credentials` | 401 | Public key and secret key do not match, or the key was revoked | Check both keys, or generate a new pair |
+| `environment_mismatch` | 401 | Sandbox key used on production, or the reverse | Use the base URL that matches the key prefix |
+| `kyc_required` | 403 | Account has not passed KYC | Complete [KYC verification](/kyc-verification) |
+| `production_access_required` | 403 | Live keys used before production access was approved | Request production access in the dashboard |
+| `forbidden` | 403 | Key does not have permission for this action | Check the account's permissions |
+
+### Request validation
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `invalid_request` | 400 | Body or query is malformed | Check field types and JSON syntax |
+| `missing_parameter` | 400 | A required field is absent | Add the field named in `param` |
+| `invalid_parameter` | 400 | A field has an invalid value | Correct the field named in `param` |
+| `not_found` | 404 | Resource ID does not exist | Verify the ID and environment |
+| `idempotency_conflict` | 409 | Same `Idempotency-Key` reused with a different body | Use a new key for a new request |
+
+### Rates and quotes
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `unsupported_pair` | 422 | Network, asset, fiat, or method combination not supported | Check [supported currencies](/supported-currencies) |
+| `amount_too_low` | 422 | Amount below the minimum for the pair | Increase the amount |
+| `amount_too_high` | 422 | Amount above the limit for the pair or your account | Lower the amount or request a higher limit |
+| `quote_expired` | 422 | Quote passed its 30-minute validity window | Generate a new [quote](/api-reference/quotes) |
+| `quote_already_used` | 409 | Quote was already used for a transaction | Generate a new quote |
+| `quote_not_found` | 404 | No quote with this ID exists for your account | Check the quote ID |
+
+### Ramps and transactions
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `invalid_wallet_address` | 422 | `wallet_address` or `refund_address` is not valid for the network | Check the address format for the network |
+| `beneficiary_mismatch` | 422 | Beneficiary currency or method does not match the quote | Use a beneficiary that matches the quote |
+| `payment_failed` | 422 | Fiat collection was declined by the payer's provider | Ask the payer to retry or use another method |
+| `payout_failed` | 422 | Fiat payout was rejected by the recipient's bank or provider | Check beneficiary details. Funds are refunded |
+| `insufficient_deposit` | 422 | Deposit received was less than the quoted amount | Contact support with the transaction ID |
+| `network_unavailable` | 503 | The target network is `degraded` or `down` | Check [network stats](/api-reference/network-stats) and retry later |
+
+### Deposit wallets
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `unsupported_network` | 422 | Network is not `stellar`, `celo`, or `bitcoin` | Use a supported network |
+| `unsupported_asset` | 422 | Asset is not available on the chosen network | Check the asset list for the network |
+| `invoice_expired` | 422 | Lightning invoice expired before payment | Create a new Lightning address |
+| `wallet_disabled` | 409 | Wallet was disabled and cannot receive funds | Create a new deposit wallet |
+
+### Beneficiaries
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `invalid_phone_number` | 422 | Phone number format is invalid for the country | Use international format, for example `+254712345678` |
+| `invalid_bank_account` | 422 | Bank code or account number could not be validated | Verify the bank details |
+| `unsupported_provider` | 422 | Mobile money provider not supported in the country | Choose a supported provider |
+
+### Webhooks
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `invalid_webhook_url` | 422 | URL is not a public HTTPS endpoint | Use a reachable `https://` URL |
+| `unsupported_event` | 422 | Event type in `events` does not exist | Use an event from the [webhook event list](/webhooks#event-types) |
+
+### Rate limits and server errors
+
+| Code | Status | Cause | Fix |
+| --- | --- | --- | --- |
+| `rate_limited` | 429 | Too many requests in a short window | Wait for the time in the `Retry-After` header, then retry with exponential backoff |
+| `internal_error` | 500 | Unexpected error at PeerPesa | Retry with backoff. Contact support with `request_id` if it persists |
+| `service_unavailable` | 503 | PeerPesa or a partner is temporarily unavailable | Retry with backoff |
+
+## Retry guidance
+
+- **Retry** `429`, `500`, and `503` with exponential backoff (for example 1s, 2s, 4s, up to 5 attempts).
+- **Do not retry** `400`, `401`, `403`, `404`, or `422` without changing the request.
+- Send an `Idempotency-Key` header on `POST` requests so a retried request never creates a duplicate transaction.
+
+```javascript Error handling example
+const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm", options);
+if (!res.ok) {
+  const { error } = await res.json();
+  switch (error.code) {
+    case "quote_expired":
+      // Generate a fresh quote and try again
+      break;
+    case "unauthorized":
+      // Refresh the access token and retry
+      break;
+    default:
+      console.error(error.code, error.message, error.request_id);
+  }
+}
+```

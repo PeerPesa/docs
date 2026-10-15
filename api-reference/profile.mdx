@@ -1,0 +1,172 @@
+---
+title: "Profile API: account details, KYC status, and limits"
+sidebarTitle: "Profile"
+description: "Retrieve and update your PeerPesa account profile, check KYC verification status and required actions, and view per-transaction, daily, and monthly limits."
+---
+
+The Profile API returns information about the PeerPesa account that owns your API keys: contact and business details, KYC verification status, and transaction limits. Use it to confirm which environment and account a key belongs to, and to check limits before generating quotes.
+
+## The profile object
+
+<ResponseField name="user_id" type="string">Unique account identifier (UUID).</ResponseField>
+<ResponseField name="account_type" type="string">`individual` or `business`.</ResponseField>
+<ResponseField name="first_name" type="string">Account holder's first name.</ResponseField>
+<ResponseField name="last_name" type="string">Account holder's last name.</ResponseField>
+<ResponseField name="business_name" type="string | null">Registered business name. `null` for individual accounts.</ResponseField>
+<ResponseField name="email" type="string">Verified email address.</ResponseField>
+<ResponseField name="phone_number" type="string">Verified phone number in international format.</ResponseField>
+<ResponseField name="country" type="string">ISO 3166-1 alpha-2 country code.</ResponseField>
+<ResponseField name="default_currency" type="string">Default fiat currency, for example `KES`.</ResponseField>
+<ResponseField name="kyc_status" type="string">`not_started`, `pending`, `action_required`, `approved`, or `rejected`. See [KYC verification](/kyc-verification).</ResponseField>
+<ResponseField name="two_factor_enabled" type="boolean">Whether 2FA is enabled on the account.</ResponseField>
+<ResponseField name="environment" type="string">`sandbox` or `production`, based on the key used.</ResponseField>
+<ResponseField name="status" type="string">`active`, `suspended`, or `closed`.</ResponseField>
+<ResponseField name="created_at" type="string">ISO 8601 account creation timestamp.</ResponseField>
+
+## GET /profile
+
+Retrieves the profile of the authenticated account.
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.peerpesa.co/v1/profile \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/profile", {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const profile = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "user_id": "9f2c4a71-3b8e-4d2a-a6c5-1e7b9d0f4c28",
+  "account_type": "business",
+  "first_name": "Amina",
+  "last_name": "Otieno",
+  "business_name": "Otieno Traders Ltd",
+  "email": "amina@otienotraders.co.ke",
+  "phone_number": "+254712345678",
+  "country": "KE",
+  "default_currency": "KES",
+  "kyc_status": "approved",
+  "two_factor_enabled": true,
+  "environment": "production",
+  "status": "active",
+  "created_at": "2026-03-02T09:14:00Z"
+}
+```
+
+## PATCH /profile
+
+Updates editable profile fields. Only the fields you send are changed.
+
+<ParamField body="first_name" type="string">Account holder's first name.</ParamField>
+<ParamField body="last_name" type="string">Account holder's last name.</ParamField>
+<ParamField body="phone_number" type="string">New phone number in international format. Must be re-verified before it takes effect.</ParamField>
+<ParamField body="default_currency" type="string">Default fiat currency: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`.</ParamField>
+
+<Note>
+  Email, country, account type, and business details are tied to your KYC record and cannot be changed through the API. Contact support to update them.
+</Note>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://api.peerpesa.co/v1/profile \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "default_currency": "TZS" }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/profile", {
+  method: "PATCH",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ default_currency: "TZS" }),
+});
+const profile = await res.json();
+```
+
+</CodeGroup>
+
+Returns the updated [profile object](#the-profile-object).
+
+## GET /profile/kyc
+
+Returns the account's KYC verification details.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/profile/kyc \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```json Response
+{
+  "kyc_status": "action_required",
+  "account_type": "business",
+  "level": 1,
+  "submitted_at": "2026-10-10T08:22:00Z",
+  "reviewed_at": "2026-10-12T14:05:00Z",
+  "required_actions": [
+    {
+      "code": "proof_of_address_expired",
+      "message": "Upload a proof of address dated within the last 3 months."
+    }
+  ]
+}
+```
+
+<ResponseField name="kyc_status" type="string">Current verification status.</ResponseField>
+<ResponseField name="level" type="integer">Verification tier. Higher levels unlock higher limits.</ResponseField>
+<ResponseField name="required_actions" type="object[]">Outstanding requests from compliance. Empty when nothing is needed.</ResponseField>
+
+## GET /profile/limits
+
+Returns transaction limits for the account. Check these before generating a [quote](/api-reference/quotes) to avoid `amount_too_high` errors.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/profile/limits \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```json Response
+{
+  "currency": "USD",
+  "limits": {
+    "per_transaction": { "max": "10000.00" },
+    "daily": { "max": "25000.00", "used": "3200.00", "remaining": "21800.00" },
+    "monthly": { "max": "250000.00", "used": "48150.00", "remaining": "201850.00" }
+  },
+  "resets_at": {
+    "daily": "2026-10-16T00:00:00Z",
+    "monthly": "2026-11-01T00:00:00Z"
+  }
+}
+```
+
+<ResponseField name="currency" type="string">Currency the limits are expressed in.</ResponseField>
+<ResponseField name="limits" type="object">`per_transaction`, `daily`, and `monthly` limits with `max`, `used`, and `remaining` amounts.</ResponseField>
+<ResponseField name="resets_at" type="object">When the daily and monthly usage counters reset.</ResponseField>
+
+<Tip>
+  To read wallet balances per coin and network, use [GET /wallet/balances](/api-reference/balances).
+</Tip>
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `unauthorized` | 401 | Token missing or expired |
+| `invalid_parameter` | 400 | A field in `PATCH /profile` has an invalid value |
+| `invalid_phone_number` | 422 | Phone number format is invalid |
+
+See [Error Codes](/errors) for the full list.

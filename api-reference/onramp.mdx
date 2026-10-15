@@ -1,0 +1,194 @@
+---
+title: "Convert fiat to crypto with PeerPesa onramp"
+sidebarTitle: "Onramp"
+description: "Use PeerPesa onramp to convert local fiat into crypto. Create a quote, confirm it with the receiving wallet and payer, then track the transaction to completion."
+---
+
+An onramp converts local fiat into cryptocurrency. After you create a quote that locks the rate and fees, you confirm the quote with the wallet address that will receive the crypto and the payer details. The transaction moves through statuses as fiat is collected and crypto is sent.
+
+<Steps>
+  <Step title="Check the rate">
+    Call [GET /rates](/api-reference/rates) with `type=onramp` and your preferred `network`, `asset`, and `fiat_currency` to see the current indicative rate.
+  </Step>
+  <Step title="Create a quote">
+    Call [POST /quotes](/api-reference/quotes) to lock the rate and fee breakdown for 30 minutes. Save the quote `id`.
+  </Step>
+  <Step title="Confirm the quote">
+    Call `POST /quotes/{id}/confirm` with the destination `wallet_address` and payer details. You receive a transaction in status `awaiting_payment` with `payment_instructions`.
+  </Step>
+  <Step title="Track the transaction">
+    Poll [GET /transactions/\{id\}](/api-reference/transactions) or wait for webhooks. Status flows from `awaiting_payment` to `processing`, then `completed` or `failed`.
+  </Step>
+</Steps>
+
+## Confirm an onramp quote
+
+**POST** `/quotes/{id}/confirm`
+
+Confirms an active `onramp` quote and creates the onramp transaction.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  Active onramp quote ID from `POST /quotes`. Valid for 30 minutes.
+</ParamField>
+
+### Request body
+
+<ParamField body="wallet_address" type="string" required>
+  Blockchain address that will receive the crypto.
+</ParamField>
+
+<ParamField body="payer" type="object" required>
+  Payer details. For `mobile_money`, include `phone_number`. For `bank_transfer`, include account details such as `account_number` and `bank_code`.
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Optional external reference ID for your records.
+</ParamField>
+
+### Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_address": "GABC123...",
+    "payer": {
+      "phone_number": "+254712345678"
+    },
+    "reference": "order-12345"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer <access_token>',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    wallet_address: 'GABC123...',
+    payer: {
+      phone_number: '+254712345678'
+    },
+    reference: 'order-12345'
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": "txn_9a3b4c5d6e7f",
+  "type": "onramp",
+  "status": "awaiting_payment",
+  "quote_id": "qt_8f2k3m9n1p0q",
+  "network": "stellar",
+  "asset": "USDC",
+  "fiat_currency": "KES",
+  "source_amount": "100.00",
+  "destination_amount": "0.76",
+  "fee": {
+    "total": "1.50",
+    "currency": "USDC",
+    "processing_fee": "1.00",
+    "network_fee": "0.50"
+  },
+  "rate": "129.45",
+  "tx_hash": null,
+  "wallet_address": "GABC123...",
+  "reference": "order-12345",
+  "payment_instructions": {
+    "method": "mobile_money",
+    "phone_number": "+254712345678",
+    "prompt_text": "You will receive an M-Pesa prompt to complete payment."
+  },
+  "created_at": "2024-01-15T10:05:00Z",
+  "updated_at": "2024-01-15T10:05:00Z"
+}
+```
+
+### Response fields
+
+<ResponseField name="id" type="string">
+  Unique transaction identifier, e.g. `txn_...`.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `onramp` when confirming an onramp quote.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status: `awaiting_payment`, `processing`, `completed`, `failed`, `expired`, `refunded`.
+</ResponseField>
+
+<ResponseField name="quote_id" type="string">
+  ID of the quote used for this ramp.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Blockchain network.
+</ResponseField>
+
+<ResponseField name="asset" type="string">
+  Crypto asset sent after fiat is received.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string">
+  Fiat currency being paid.
+</ResponseField>
+
+<ResponseField name="source_amount" type="string">
+  Fiat amount paid by the user.
+</ResponseField>
+
+<ResponseField name="destination_amount" type="string">
+  Crypto amount the wallet will receive after fees.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown from the quote: `total`, `currency`, `processing_fee`, `network_fee`.
+</ResponseField>
+
+<ResponseField name="rate" type="string">
+  Locked exchange rate.
+</ResponseField>
+
+<ResponseField name="tx_hash" type="string | null">
+  On-chain transaction hash once crypto is sent.
+</ResponseField>
+
+<ResponseField name="wallet_address" type="string">
+  Destination address for the crypto payout.
+</ResponseField>
+
+<ResponseField name="reference" type="string">
+  Your optional external reference.
+</ResponseField>
+
+<ResponseField name="payment_instructions" type="object">
+  Instructions for completing fiat payment. Varies by method.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 UTC timestamp when the transaction was created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 UTC timestamp of the last update.
+</ResponseField>
+
+<Note>
+  After creation, the transaction status is `awaiting_payment`. Crypto is sent to `wallet_address` once fiat is received. Track progress with [GET /transactions/\{id\}](/api-reference/transactions).
+</Note>

@@ -1,0 +1,462 @@
+---
+title: "Swap between crypto coins and networks in your balance"
+sidebarTitle: "Swap"
+description: "Get a locked swap quote and execute it to exchange one asset for another within your PeerPesa wallet."
+---
+
+Use the swap endpoints to exchange one cryptocurrency or network balance for another directly within your PeerPesa wallet. For example, you can swap USDC on Stellar for cUSD on Celo, or XLM for USDC on the same network.
+
+Swaps use a two-step flow: first request a locked quote that fixes the rate and fees for exactly 30 minutes, then execute the quote. If the market moves beyond your configured slippage tolerance before execution, the swap fails with a `slippage_exceeded` error.
+
+<Tabs>
+  <Tab title="Sandbox">
+    ```text
+    Base URL: https://sandbox-api.peerpesa.co/v1
+    ```
+  </Tab>
+  <Tab title="Production">
+    ```text
+    Base URL: https://api.peerpesa.co/v1
+    ```
+  </Tab>
+</Tabs>
+
+All requests require an `Authorization: Bearer <token>` header. POST endpoints accept an optional `Idempotency-Key` header to prevent duplicate transactions. Amounts are decimal strings. Network codes are uppercase as returned by [GET /currencies](/api-reference/coins): `STELLAR`, `CELO`, `BITCOIN`.
+
+---
+
+## Generate a swap quote
+
+Request a quote for swapping one asset to another. The quote locks the rate, minimum received amount, and fees for 30 minutes.
+
+### Endpoint
+
+```text
+POST /wallet/swap/quote
+```
+
+### Request headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional unique key to prevent duplicate quote creation
+</ParamField>
+
+### Request body
+
+<ParamField body="from" type="object" required>
+  Asset you are swapping from
+
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string" required>
+      Source token, e.g. `USDC`, `XLM`, `BTC`
+    </ResponseField>
+
+    <ResponseField name="network" type="string" required>
+      Source network, e.g. `STELLAR`, `CELO`, `BITCOIN`
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="to" type="object" required>
+  Asset you are swapping to
+
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string" required>
+      Target token, e.g. `CUSD`, `USDC`, `USDT`
+    </ResponseField>
+
+    <ResponseField name="network" type="string" required>
+      Target network, e.g. `STELLAR`, `CELO`, `BITCOIN`
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount to swap as a decimal string
+</ParamField>
+
+<ParamField body="amount_side" type="string" required>
+  Which side the amount refers to: `from` or `to`
+</ParamField>
+
+<ParamField body="slippage" type="number">
+  Maximum acceptable slippage as a percentage, e.g. `0.5` for 0.5%. Defaults to the slippage value from [GET /currencies](/api-reference/coins) or 0.5% if not specified.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="id" type="string">
+  Quote ID, e.g. `sq_...`
+</ResponseField>
+
+<ResponseField name="from" type="object">
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string">
+      Source token
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      Source network
+    </ResponseField>
+
+    <ResponseField name="amount" type="string">
+      Amount deducted from balance
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="to" type="object">
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string">
+      Target token
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      Target network
+    </ResponseField>
+
+    <ResponseField name="amount" type="string">
+      Amount you will receive
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="rate" type="string">
+  Exchange rate (to per from unit)
+</ResponseField>
+
+<ResponseField name="minimum_received" type="string">
+  Minimum amount you are guaranteed to receive, based on slippage
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown:
+
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee in source asset
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Source asset symbol
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      Platform fee
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Network fee
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="slippage" type="number">
+  Slippage percentage used for this quote
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601 timestamp. Quote expires 30 minutes after created_at.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/swap/quote \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": {
+      "symbol": "USDC",
+      "network": "STELLAR"
+    },
+    "to": {
+      "symbol": "CUSD",
+      "network": "CELO"
+    },
+    "amount": "100.00",
+    "amount_side": "from",
+    "slippage": 0.5
+  }'
+```
+
+```js JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/wallet/swap/quote", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    from: { symbol: "USDC", network: "STELLAR" },
+    to: { symbol: "CUSD", network: "CELO" },
+    amount: "100.00",
+    amount_side: "from",
+    slippage: 0.5,
+  }),
+});
+const data = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "id": "sq_7xYz9AbCdEfGhIjK",
+  "from": {
+    "symbol": "USDC",
+    "network": "STELLAR",
+    "amount": "100.00"
+  },
+  "to": {
+    "symbol": "CUSD",
+    "network": "CELO",
+    "amount": "99.45"
+  },
+  "rate": "0.9945",
+  "minimum_received": "98.95",
+  "fee": {
+    "total": "0.55",
+    "currency": "USDC",
+    "app_fee": "0.30",
+    "network_fee": "0.25"
+  },
+  "slippage": 0.5,
+  "expires_at": "2024-01-15T14:30:00Z",
+  "created_at": "2024-01-15T14:00:00Z"
+}
+```
+
+---
+
+## Execute a swap
+
+Execute a previously generated swap quote to create a swap transaction. The swap deducts the source asset from your balance and credits the target asset.
+
+### Endpoint
+
+```text
+POST /wallet/swap
+```
+
+### Request headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional unique key to prevent duplicate execution
+</ParamField>
+
+### Request body
+
+<ParamField body="quote_id" type="string" required>
+  ID of the swap quote to execute, e.g. `sq_7xYz9AbCdEfGhIjK`
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Optional external reference string
+</ParamField>
+
+### Response fields
+
+The response is a wallet transaction object.
+
+<ResponseField name="id" type="string">
+  Transaction ID, e.g. `txn_...`
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `swap`
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `pending`, `processing`, `completed`, `failed`, or `refunded`
+</ResponseField>
+
+<ResponseField name="from" type="object">
+  Source asset details:
+
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string">
+      Source token
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      Source network
+    </ResponseField>
+
+    <ResponseField name="amount" type="string">
+      Amount debited
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="to" type="object">
+  Target asset details:
+
+  <Expandable title="properties">
+    <ResponseField name="symbol" type="string">
+      Target token
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      Target network
+    </ResponseField>
+
+    <ResponseField name="amount" type="string">
+      Amount credited
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown as in the quote
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  Net target amount received after fees
+</ResponseField>
+
+<ResponseField name="reference" type="string" nullable>
+  External reference if provided
+</ResponseField>
+
+<ResponseField name="tx_hash" type="string" nullable>
+  On-chain transaction hash (null until completed)
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/swap \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quote_id": "sq_7xYz9AbCdEfGhIjK",
+    "reference": "swap_2024_001"
+  }'
+```
+
+```js JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/wallet/swap", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    quote_id: "sq_7xYz9AbCdEfGhIjK",
+    reference: "swap_2024_001",
+  }),
+});
+const data = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "id": "txn_mNo4PqRs5TuV6wX7",
+  "type": "swap",
+  "status": "pending",
+  "from": {
+    "symbol": "USDC",
+    "network": "STELLAR",
+    "amount": "100.00"
+  },
+  "to": {
+    "symbol": "CUSD",
+    "network": "CELO",
+    "amount": "99.45"
+  },
+  "fee": {
+    "total": "0.55",
+    "currency": "USDC",
+    "app_fee": "0.30",
+    "network_fee": "0.25"
+  },
+  "net_amount": "99.45",
+  "reference": "swap_2024_001",
+  "tx_hash": null,
+  "created_at": "2024-01-15T14:05:00Z",
+  "updated_at": "2024-01-15T14:05:00Z"
+}
+```
+
+---
+
+## Understanding slippage
+
+Slippage is the difference between the quoted price and the actual execution price. Market prices can change between quote generation and execution, especially for cross-network swaps.
+
+When you request a quote, you set a `slippage` tolerance as a percentage. If the executable rate moves unfavorably beyond that tolerance before you execute, the API returns a `slippage_exceeded` error and you must request a fresh quote.
+
+<Warning>
+  A lower slippage gives you better price protection but increases the chance the quote becomes unexecutable. A higher slippage makes execution more likely but you may receive less than quoted.
+</Warning>
+
+<Note>
+  The `minimum_received` field in the quote shows the worst-case amount you are guaranteed to receive if the swap executes within tolerance.
+</Note>
+
+---
+
+## Error codes
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `unsupported_network` | 422 | One of the networks is not active or available for swapping |
+| `unsupported_asset` | 422 | One of the symbol/network combinations is not supported |
+| `amount_too_low` | 422 | The amount is below the minimum for the source or target asset |
+| `amount_too_high` | 422 | The amount exceeds the maximum for the source or target asset |
+| `insufficient_balance` | 422 | Your wallet balance is too low to cover the swap amount plus fees |
+| `quote_expired` | 422 | The quote expired after 30 minutes. Request a new quote |
+| `slippage_exceeded` | 422 | Market moved beyond your slippage tolerance. Request a new quote |
+| `network_unavailable` | 503 | One of the networks is temporarily unavailable |
+
+---
+
+## Step-by-step flow
+
+<Steps>
+  <Step title="Request a quote">
+    Call `POST /wallet/swap/quote` with your from/to assets, amount, and optional slippage tolerance.
+  </Step>
+  <Step title="Review the quote">
+    Check the `rate`, `minimum_received`, and `fee`. The quote is valid for 30 minutes.
+  </Step>
+  <Step title="Execute the quote">
+    Call `POST /wallet/swap` with the `quote_id`. No additional balance checks are needed.
+  </Step>
+  <Step title="Track completion">
+    Poll [GET /transactions/](/api-reference/transactions){id} or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
+  </Step>
+</Steps>

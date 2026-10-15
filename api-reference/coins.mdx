@@ -1,0 +1,245 @@
+---
+title: "List supported currencies with networks, fees, and prices"
+sidebarTitle: "List Currencies"
+description: "GET /currencies returns every supported coin with its blockchain networks, confirmations, send, deposit, swap, and buy fees, withdrawal limits, and price."
+---
+
+The currencies endpoint lists every crypto asset PeerPesa supports, such as USDC, together with the blockchain networks it runs on and its current market price. Use it to show users which networks are active for a coin, how long deposits take to confirm, and what fees apply before you generate a quote.
+
+## GET /currencies
+
+Returns all supported coins.
+
+<ParamField query="symbol" type="string">
+  Filter by coin symbol, for example `USDC`.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by coin status: `active` or `inactive`.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://api.peerpesa.co/v1/currencies?symbol=USDC" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/currencies?symbol=USDC", {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const coins = await res.json();
+```
+
+</CodeGroup>
+
+### Example coin
+
+```json Response expandable
+{
+  "coin_id": "3bb5afa7-947b-4de2-9876-40ec67d175ab",
+  "token_name": "USDC",
+  "symbol": "USDC",
+  "token_type": "Native",
+  "coin_status": "active",
+  "networks": [
+    {
+      "coin_id": "3bb5afa7-947b-4de2-9876-40ec67d175ab",
+      "connection_id": "16597dd6-024d-437f-bfa0-6b4702b0b72e",
+      "blockchain_network_id": "3bb5afa7-947b-4de2-9876-40ec67d1711b",
+      "network": "STELLAR",
+      "label": "STELLAR",
+      "confirmations": "3",
+      "duration": "1 min",
+      "details": "Stellar Network",
+      "send_fees": 0.0000102,
+      "deposit_fees": 0.0000102,
+      "swap_fees": 0.0000102,
+      "buy_fees": 0.0000102,
+      "fees_type": null,
+      "slippage": null,
+      "app_fee_rate": null,
+      "min_withdraw": null,
+      "max_withdraw": null,
+      "status": "active"
+    },
+    {
+      "coin_id": "3bb5afa7-947b-4de2-9876-40ec67d175ab",
+      "connection_id": "a1a2b4aa-ca4d-4f44-bf6a-614799a3fa9e",
+      "blockchain_network_id": "3bb5afa7-947b-4de2-9876-40ec67d1711a",
+      "network": "CELO",
+      "label": "CELO",
+      "confirmations": "2",
+      "duration": "4 mins",
+      "details": "CELO",
+      "send_fees": 0.11,
+      "deposit_fees": 0.11,
+      "swap_fees": 0.11,
+      "buy_fees": 0.11,
+      "fees_type": null,
+      "slippage": null,
+      "app_fee_rate": null,
+      "min_withdraw": null,
+      "max_withdraw": null,
+      "status": "active"
+    },
+    {
+      "coin_id": "3bb5afa7-947b-4de2-9876-40ec67d175ab",
+      "connection_id": "c3e8d9f6-7a5b-4c3d-9e2f-3a7b6c8d3333",
+      "blockchain_network_id": "550e8400-e29b-41d4-a716-446655440000",
+      "network": "SOLANA",
+      "label": "Sol",
+      "confirmations": "1",
+      "duration": "5-10 seconds",
+      "details": "High-performance L1 blockchain with low fees and fast finality",
+      "send_fees": 0.000005,
+      "deposit_fees": 0,
+      "swap_fees": 0.001,
+      "buy_fees": 0.002,
+      "fees_type": "flat",
+      "slippage": 0.5,
+      "app_fee_rate": 0.01,
+      "min_withdraw": 0.01,
+      "max_withdraw": 1000000,
+      "status": "inactive"
+    },
+    {
+      "coin_id": "3bb5afa7-947b-4de2-9876-40ec67d175ab",
+      "connection_id": "e5a9c3b7-4f2d-4b8a-9d6e-5c7a8b9f5555",
+      "blockchain_network_id": "8cf1955c-ff62-4088-b753-97748628ea31",
+      "network": "BASE",
+      "label": "BASE",
+      "confirmations": "5",
+      "duration": "1 min",
+      "details": "BASE Network",
+      "send_fees": 0.0396,
+      "deposit_fees": 0.0396,
+      "swap_fees": 0.0396,
+      "buy_fees": 0.0396,
+      "fees_type": null,
+      "slippage": 0.5,
+      "app_fee_rate": null,
+      "min_withdraw": null,
+      "max_withdraw": null,
+      "status": "inactive"
+    }
+  ],
+  "icon": "USDC",
+  "price": {
+    "id": "",
+    "base_coin": "USDC",
+    "quote_coin": "USD",
+    "amount": 0.99965,
+    "rate": {
+      "buy_rate": 1,
+      "sale_rate": 0.9999,
+      "exchange_rate": 0.99965
+    },
+    "market_details": {
+      "usd24hVolume": 20032062892.67423,
+      "usd24hChange": -0.00407187,
+      "usdMarketCap": 72722013902.91692
+    },
+    "provider": {
+      "sell": "100002",
+      "buy": "100002"
+    },
+    "source": "",
+    "status": "active",
+    "marketcap_amount": 0.99965
+  }
+}
+```
+
+<Note>
+  Only networks with `status: "active"` can be used for deposits, sends, and quotes. In the example above, USDC is live on Stellar and Celo, while Solana and Base are listed but `inactive`.
+</Note>
+
+## Response fields
+
+<ResponseField name="coin_id" type="string">
+  Unique identifier of the coin (UUID).
+</ResponseField>
+
+<ResponseField name="token_name" type="string">
+  Display name of the coin, for example `USDC`.
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  Ticker symbol, for example `USDC`.
+</ResponseField>
+
+<ResponseField name="token_type" type="string">
+  Token type, for example `Native`.
+</ResponseField>
+
+<ResponseField name="coin_status" type="string">
+  `active` or `inactive`. Inactive coins cannot be used.
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  Icon identifier for the coin.
+</ResponseField>
+
+<ResponseField name="networks" type="object[]">
+  Blockchain networks the coin is available on, with per-network fees and limits.
+  <Expandable title="properties">
+    <ResponseField name="coin_id" type="string">ID of the parent coin.</ResponseField>
+    <ResponseField name="connection_id" type="string">ID of the coin and network connection.</ResponseField>
+    <ResponseField name="blockchain_network_id" type="string">ID of the blockchain network.</ResponseField>
+    <ResponseField name="network" type="string">Network code, for example `STELLAR`, `CELO`, `SOLANA`, or `BASE`.</ResponseField>
+    <ResponseField name="label" type="string">Display label for the network.</ResponseField>
+    <ResponseField name="confirmations" type="string">Block confirmations required before a deposit is credited.</ResponseField>
+    <ResponseField name="duration" type="string">Typical confirmation time, for example `1 min`.</ResponseField>
+    <ResponseField name="details" type="string">Short description of the network.</ResponseField>
+    <ResponseField name="send_fees" type="number">Fee to send or withdraw the coin on this network.</ResponseField>
+    <ResponseField name="deposit_fees" type="number">Fee charged on deposits.</ResponseField>
+    <ResponseField name="swap_fees" type="number">Fee charged on swaps.</ResponseField>
+    <ResponseField name="buy_fees" type="number">Fee charged on purchases.</ResponseField>
+    <ResponseField name="fees_type" type="string | null">How fees are applied, for example `flat`. `null` when not set.</ResponseField>
+    <ResponseField name="slippage" type="number | null">Maximum allowed slippage in percent.</ResponseField>
+    <ResponseField name="app_fee_rate" type="number | null">Additional application fee rate.</ResponseField>
+    <ResponseField name="min_withdraw" type="number | null">Minimum withdrawal amount. `null` means no minimum.</ResponseField>
+    <ResponseField name="max_withdraw" type="number | null">Maximum withdrawal amount. `null` means no maximum.</ResponseField>
+    <ResponseField name="status" type="string">`active` or `inactive` for this network.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="price" type="object">
+  Current market price of the coin.
+  <Expandable title="properties">
+    <ResponseField name="base_coin" type="string">Coin being priced, for example `USDC`.</ResponseField>
+    <ResponseField name="quote_coin" type="string">Currency the price is quoted in, for example `USD`.</ResponseField>
+    <ResponseField name="amount" type="number">Current price of one unit.</ResponseField>
+    <ResponseField name="rate" type="object">
+      Buy and sell rates.
+      <Expandable title="properties">
+        <ResponseField name="buy_rate" type="number">Rate when buying the coin.</ResponseField>
+        <ResponseField name="sale_rate" type="number">Rate when selling the coin.</ResponseField>
+        <ResponseField name="exchange_rate" type="number">Mid-market exchange rate.</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="market_details" type="object">
+      Market data in USD.
+      <Expandable title="properties">
+        <ResponseField name="usd24hVolume" type="number">24-hour trading volume.</ResponseField>
+        <ResponseField name="usd24hChange" type="number">24-hour price change in percent.</ResponseField>
+        <ResponseField name="usdMarketCap" type="number">Total market capitalization.</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="provider" type="object">Liquidity provider IDs for `buy` and `sell`.</ResponseField>
+    <ResponseField name="source" type="string">Price source. Empty when not set.</ResponseField>
+    <ResponseField name="status" type="string">`active` or `inactive` for the price feed.</ResponseField>
+    <ResponseField name="marketcap_amount" type="number">Price used for market cap calculations.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CardGroup cols={2}>
+  <Card title="Network stats" icon="signal" href="/api-reference/network-stats">
+    Check live network status before sending funds.
+  </Card>
+  <Card title="Check rates" icon="chart-line" href="/api-reference/rates">
+    Get indicative fiat rates for a coin.
+  </Card>
+</CardGroup>

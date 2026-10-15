@@ -1,0 +1,340 @@
+---
+title: "Check Wallet Balances and Network Breakdown"
+sidebarTitle: "Balances"
+description: "Retrieve wallet balances per network, including available, pending, locked, and USD values. Filter by coin, network, and zero-balance inclusion."
+---
+
+PeerPesa stores balances per network, so USDC on Stellar and USDC on Celo are tracked separately. Use the balances endpoints to check how much you can spend right now, what is still confirming, and what is held for in-flight operations. You can also move assets between networks using the [Swap](/api-reference/swap) flow.
+
+## List all balances
+
+`GET /wallet/balances`
+
+Retrieve balances across all supported networks. Filter by coin, network, or choose whether to include zero balances.
+
+### Query parameters
+
+<ParamField query="symbol" type="string" optional>
+  Filter to a single coin, for example `USDC` or `BTC`.
+</ParamField>
+
+<ParamField query="network" type="string" optional>
+  Filter to a single network, for example `STELLAR` or `CELO`.
+</ParamField>
+
+<ParamField query="include_zero" default="false" type="boolean" optional>
+  Include coins with a zero total balance in the response.
+</ParamField>
+
+### Request headers
+
+| Header | Value |
+| --- | --- |
+| Authorization | `Bearer <token>` |
+
+### Response
+
+<ResponseField name="balances" type="array" required>
+  List of balance objects, one per symbol and network combination.
+
+  <Expandable title="Balance object">
+    <ResponseField name="symbol" type="string" required>
+      The coin symbol, for example `USDC`.
+    </ResponseField>
+
+    <ResponseField name="network" type="string" required>
+      The network code, for example `STELLAR` or `CELO`.
+    </ResponseField>
+
+    <ResponseField name="available" type="string" required>
+      Spendable balance right now (decimal string).
+    </ResponseField>
+
+    <ResponseField name="pending" type="string" required>
+      Incoming amount still awaiting confirmations (decimal string).
+    </ResponseField>
+
+    <ResponseField name="locked" type="string" required>
+      Amount held for in-progress withdraw, send, swap, or an active quote (decimal string).
+    </ResponseField>
+
+    <ResponseField name="total" type="string" required>
+      Total balance: available + pending + locked (decimal string).
+    </ResponseField>
+
+    <ResponseField name="usd_value" type="string" required>
+      Estimated USD value of the total balance (decimal string).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total_usd" type="string" required>
+  Estimated total USD value across all balances.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  ISO 8601 timestamp of the last balance update.
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.peerpesa.co/v1/wallet/balances?include_zero=true" \
+  -H "Authorization: Bearer <token>"
+```
+
+```js JavaScript
+fetch("https://api.peerpesa.co/v1/wallet/balances?include_zero=true", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <token>"
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "balances": [
+    {
+      "symbol": "USDC",
+      "network": "STELLAR",
+      "available": "1250.00",
+      "pending": "0.00",
+      "locked": "50.00",
+      "total": "1300.00",
+      "usd_value": "1300.00"
+    },
+    {
+      "symbol": "USDC",
+      "network": "CELO",
+      "available": "340.50",
+      "pending": "10.00",
+      "locked": "0.00",
+      "total": "350.50",
+      "usd_value": "350.50"
+    },
+    {
+      "symbol": "XLM",
+      "network": "STELLAR",
+      "available": "45.0000000",
+      "pending": "0.0000000",
+      "locked": "0.0000000",
+      "total": "45.0000000",
+      "usd_value": "3.82"
+    },
+    {
+      "symbol": "CUSD",
+      "network": "CELO",
+      "available": "0.00",
+      "pending": "0.00",
+      "locked": "0.00",
+      "total": "0.00",
+      "usd_value": "0.00"
+    },
+    {
+      "symbol": "BTC",
+      "network": "BITCOIN",
+      "available": "0.00250000",
+      "pending": "0.00000000",
+      "locked": "0.00000000",
+      "total": "0.00250000",
+      "usd_value": "104.35"
+    }
+  ],
+  "total_usd": "1758.67",
+  "updated_at": "2025-01-15T10:23:47.000Z"
+}
+```
+
+<Note>
+  Balances are stored per network. If you hold USDC on both Stellar and Celo, each appears as a separate entry. To move assets between networks, use the [Swap](/api-reference/swap) flow.
+</Note>
+
+## Get balance for a single coin
+
+`GET /wallet/balances/{symbol}`
+
+Retrieve an aggregated balance for one coin across all networks, plus a per-network breakdown.
+
+### Path parameters
+
+<ParamField path="symbol" type="string" required>
+  The coin symbol to query, for example `USDC`.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="include_zero" default="false" type="boolean" optional>
+  Include networks with a zero total balance in the breakdown.
+</ParamField>
+
+### Request headers
+
+| Header | Value |
+| --- | --- |
+| Authorization | `Bearer <token>` |
+
+### Response
+
+<ResponseField name="symbol" type="string" required>
+  The coin symbol queried.
+</ResponseField>
+
+<ResponseField name="available" type="string" required>
+  Total spendable balance across all networks (decimal string).
+</ResponseField>
+
+<ResponseField name="pending" type="string" required>
+  Total incoming amount awaiting confirmations across all networks (decimal string).
+</ResponseField>
+
+<ResponseField name="locked" type="string" required>
+  Total amount held for in-progress operations across all networks (decimal string).
+</ResponseField>
+
+<ResponseField name="total" type="string" required>
+  Total balance across all networks: available + pending + locked (decimal string).
+</ResponseField>
+
+<ResponseField name="usd_value" type="string" required>
+  Estimated USD value of the total balance.
+</ResponseField>
+
+<ResponseField name="networks" type="array" required>
+  Per-network breakdown of the balance.
+
+  <Expandable title="Network balance object">
+    <ResponseField name="network" type="string" required>
+      The network code, for example `STELLAR`.
+    </ResponseField>
+
+    <ResponseField name="available" type="string" required>
+      Spendable balance on this network.
+    </ResponseField>
+
+    <ResponseField name="pending" type="string" required>
+      Incoming amount awaiting confirmations on this network.
+    </ResponseField>
+
+    <ResponseField name="locked" type="string" required>
+      Amount held for in-progress operations on this network.
+    </ResponseField>
+
+    <ResponseField name="total" type="string" required>
+      Total balance on this network.
+    </ResponseField>
+
+    <ResponseField name="usd_value" type="string" required>
+      Estimated USD value of this network's balance.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  ISO 8601 timestamp of the last balance update.
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.peerpesa.co/v1/wallet/balances/USDC" \
+  -H "Authorization: Bearer <token>"
+```
+
+```js JavaScript
+fetch("https://api.peerpesa.co/v1/wallet/balances/USDC", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <token>"
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "symbol": "USDC",
+  "available": "1590.50",
+  "pending": "10.00",
+  "locked": "50.00",
+  "total": "1650.50",
+  "usd_value": "1650.50",
+  "networks": [
+    {
+      "network": "STELLAR",
+      "available": "1250.00",
+      "pending": "0.00",
+      "locked": "50.00",
+      "total": "1300.00",
+      "usd_value": "1300.00"
+    },
+    {
+      "network": "CELO",
+      "available": "340.50",
+      "pending": "10.00",
+      "locked": "0.00",
+      "total": "350.50",
+      "usd_value": "350.50"
+    }
+  ],
+  "updated_at": "2025-01-15T10:23:47.000Z"
+}
+```
+
+<Note>
+  Only networks with an `active` status in [GET /currencies](/api-reference/coins) can be used for deposits, withdrawals, sends, and swaps.
+</Note>
+
+## Balance fields explained
+
+<Tabs>
+  <Tab title="available">
+    The amount you can spend right now. This excludes pending deposits and any funds locked for in-progress operations.
+  </Tab>
+  <Tab title="pending">
+    Incoming deposits that are still awaiting the required number of network confirmations. Once confirmed, pending moves into available.
+  </Tab>
+  <Tab title="locked">
+    Funds held for operations that are not yet completed: open quotes, pending withdrawals, in-progress sends, or active swaps. If an operation fails or is cancelled, locked funds return to available.
+  </Tab>
+  <Tab title="total">
+    The full balance: available + pending + locked. This is the net amount held in your wallet for that coin and network.
+  </Tab>
+</Tabs>
+
+## Error codes
+
+| HTTP status | Code | Description |
+| --- | --- | --- |
+| 422 | `unsupported_asset` | The requested `symbol` is not supported. |
+| 422 | `unsupported_network` | The requested `network` is not supported. |
+| 503 | `network_unavailable` | The network is temporarily unavailable. Retry after a short delay. |
+
+## Next steps
+
+<Steps>
+  <Step title="Deposit funds">
+    Add assets to your wallet using [Deposit Wallets](/api-reference/deposit-wallets) to generate a deposit address.
+  </Step>
+  <Step title="Withdraw or send">
+    Move funds off-platform with [Withdraw](/api-reference/withdraw) or send to another PeerPesa wallet with [Send](/api-reference/send).
+  </Step>
+  <Step title="Swap between networks">
+    Convert between supported networks using [Swap](/api-reference/swap), for example moving USDC from Celo to Stellar.
+  </Step>
+</Steps>

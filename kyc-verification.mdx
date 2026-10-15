@@ -1,0 +1,110 @@
+---
+title: "Complete KYC verification before generating API keys"
+sidebarTitle: "KYC Verification"
+description: "Verify your identity or business in the PeerPesa KYC Center to unlock API key generation for the sandbox and production environments."
+---
+
+PeerPesa requires every account to pass KYC (Know Your Customer) verification before it can generate API keys. Verification confirms who you are, or who owns your business, so PeerPesa can meet its compliance obligations in each corridor it serves. This page explains which account type to choose, what documents to prepare, and how verification unlocks sandbox and production access.
+
+## Before you start
+
+Choose the account type that matches how you will use the API:
+
+| Account type | Use it when | Who is verified |
+| --- | --- | --- |
+| Individual | You are a developer or freelancer integrating for yourself | You |
+| Business | You are integrating for a company, platform, or fintech | The business, its directors, and its beneficial owners |
+
+<Note>
+  Use a business account if your integration will move funds for customers. Higher transaction limits and additional corridors are available to verified businesses.
+</Note>
+
+## Documents to prepare
+
+<Tabs>
+  <Tab title="Individual">
+    - Government-issued photo ID (national ID, passport, or driver's license)
+    - A selfie or live photo for identity matching
+    - Proof of address dated within the last 3 months (utility bill or bank statement)
+    - Phone number and email address you can verify
+  </Tab>
+  <Tab title="Business">
+    - Certificate of incorporation or business registration
+    - Company tax identification number
+    - Proof of business address
+    - Photo ID and proof of address for each director
+    - Ownership details for every beneficial owner holding 25% or more
+    - A short description of your use case and expected monthly volume
+  </Tab>
+</Tabs>
+
+<Tip>
+  If you manage several affiliated entities, you can reuse director and ownership details across them instead of re-entering them for each one.
+</Tip>
+
+## Complete verification
+
+<Steps>
+  <Step title="Create your account">
+    Sign up at [peerpesa.co](https://peerpesa.co) and verify your email address and phone number.
+  </Step>
+  <Step title="Open the KYC Center">
+    In the dashboard, go to **Profile** > **KYC Center** and choose **Individual** or **Business**.
+  </Step>
+  <Step title="Upload your documents">
+    Fill in your personal or business details and upload the documents listed above. Make sure images are clear, uncropped, and not expired.
+  </Step>
+  <Step title="Submit and track the review">
+    Submit your application and follow its status in the KYC Center. Respond quickly to any follow-up questions from the compliance team to avoid delays.
+  </Step>
+  <Step title="Generate API keys">
+    Once your status is **Approved**, the **API Keys** section unlocks. Continue to [Authentication](/authentication) to generate your key pair.
+  </Step>
+</Steps>
+
+## Verification statuses
+
+| Status | Meaning | What to do |
+| --- | --- | --- |
+| `not_started` | No KYC application submitted | Open the KYC Center and start an application |
+| `pending` | Application is under review | Wait, and check the KYC Center for follow-up questions |
+| `action_required` | Compliance needs more information or a clearer document | Upload the requested documents or answer the questions |
+| `approved` | Verification complete | Generate API keys |
+| `rejected` | Application could not be approved | Review the reason given and contact support |
+
+## Sandbox and production access
+
+PeerPesa runs two separate environments. Each has its own dashboard, API keys, and base URL.
+
+| | Sandbox | Production |
+| --- | --- | --- |
+| Purpose | Build and test your integration | Move real funds |
+| Base URL | `https://sandbox-api.peerpesa.co/v1` | `https://api.peerpesa.co/v1` |
+| Key prefixes | `pk_test_`, `sk_test_` | `pk_live_`, `sk_live_` |
+| Funds | Simulated, no real money moves | Real fiat and crypto |
+| Access | Unlocked after KYC approval | Unlocked after KYC approval and a production access request |
+
+<Steps>
+  <Step title="Build in sandbox">
+    After KYC approval, generate sandbox keys and test the full flow: rates, quotes, onramps, offramps, and beneficiaries.
+  </Step>
+  <Step title="Request production access">
+    When your integration works end to end in sandbox, request production access from the dashboard. Compliance may ask for details about your use case and expected volume.
+  </Step>
+  <Step title="Go live">
+    Once production access is approved, generate live keys in the production dashboard and switch your base URL to `https://api.peerpesa.co/v1`.
+  </Step>
+</Steps>
+
+<Warning>
+  Never use live keys for testing. Sandbox and production keys are not interchangeable, and requests sent with the wrong key for an environment return `401 unauthorized`.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Generate API keys" icon="key" href="/authentication">
+    Create your public and secret key pair and request a token.
+  </Card>
+  <Card title="Supported currencies" icon="coins" href="/supported-currencies">
+    See the fiat currencies, networks, and assets you can use.
+  </Card>
+</CardGroup>

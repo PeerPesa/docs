@@ -1,0 +1,260 @@
+---
+title: "Generate deposit wallets on Stellar, Celo, and Bitcoin"
+sidebarTitle: "Deposit"
+description: "Create dedicated deposit addresses on Stellar, Celo, and Bitcoin, and add Lightning Network addresses and invoices to receive BTC instantly with PeerPesa."
+---
+
+Deposit wallets give you or your customers a dedicated address to receive crypto into a PeerPesa balance. You choose the network when you create the wallet (`stellar`, `celo`, or `bitcoin`), and PeerPesa returns an address in the right format for that chain. Bitcoin wallets can also have Lightning Network addresses attached as extra addresses for instant, low-fee BTC deposits.
+
+## Supported networks
+
+| Network | `network` value | Assets | Address format | Extra fields |
+| --- | --- | --- | --- | --- |
+| Stellar | `stellar` | `XLM`, `USDC` | `G...` (56 characters) | `memo` required on every deposit |
+| Celo | `celo` | `CELO`, `USDT`, `USDC`, `CUSD` | `0x...` (EVM address) | None |
+| Bitcoin | `bitcoin` | `BTC` | `bc1...` (native SegWit) | Optional Lightning addresses |
+
+<Warning>
+  Only send assets listed for the wallet's network. Assets sent on the wrong network, or Stellar deposits without the memo, cannot be credited automatically.
+</Warning>
+
+## POST /wallets
+
+Creates a deposit wallet on the chosen network.
+
+<ParamField body="network" type="string" required>
+  `stellar`, `celo`, or `bitcoin`.
+</ParamField>
+
+<ParamField body="label" type="string">
+  Your own name for the wallet, for example a customer ID.
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Your identifier for the wallet, returned on every deposit and webhook.
+</ParamField>
+
+<ParamField body="lightning" type="boolean" default="false">
+  `bitcoin` only. Set to `true` to create a Lightning address together with the on-chain address.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallets \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network": "stellar",
+    "label": "Customer 4821",
+    "reference": "cust_4821"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/wallets", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    network: "stellar",
+    label: "Customer 4821",
+    reference: "cust_4821",
+  }),
+});
+const wallet = await res.json();
+```
+
+</CodeGroup>
+
+The response shape depends on the network:
+
+<Tabs>
+  <Tab title="Stellar">
+    ```json
+    {
+      "id": "wal_7c3k9d",
+      "network": "stellar",
+      "assets": ["XLM", "USDC"],
+      "address": "GCPP3K7XQ2...PESA",
+      "memo": "4829173",
+      "memo_type": "id",
+      "label": "Customer 4821",
+      "reference": "cust_4821",
+      "status": "active",
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+    ```
+
+    Stellar wallets share a PeerPesa address and are identified by `memo`. Senders must include the memo, or the deposit cannot be matched.
+  </Tab>
+  <Tab title="Celo">
+    ```json
+    {
+      "id": "wal_2f8m4a",
+      "network": "celo",
+      "assets": ["CELO", "USDT", "USDC", "CUSD"],
+      "address": "0x8a4F2c9B1e7D3a6C5b0E9f2A1d4C7b8E3f6A9c2D",
+      "label": "Customer 4821",
+      "reference": "cust_4821",
+      "status": "active",
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+    ```
+
+    Each Celo wallet has a unique address that receives all supported Celo assets.
+  </Tab>
+  <Tab title="Bitcoin">
+    ```json
+    {
+      "id": "wal_9q1x5b",
+      "network": "bitcoin",
+      "assets": ["BTC"],
+      "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+      "lightning_addresses": [
+        {
+          "id": "ln_4h7r2k",
+          "type": "lightning_address",
+          "address": "cust4821@pay.peerpesa.co",
+          "lnurl": "LNURL1DP68GURN8GHJ7...",
+          "status": "active",
+          "created_at": "2026-10-15T05:00:00Z"
+        }
+      ],
+      "confirmations_required": 2,
+      "label": "Customer 4821",
+      "reference": "cust_4821",
+      "status": "active",
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+    ```
+
+    On-chain BTC deposits are credited after `confirmations_required` confirmations. Lightning deposits are credited as soon as the payment settles.
+  </Tab>
+</Tabs>
+
+<ResponseField name="id" type="string">Wallet ID, for example `wal_7c3k9d`.</ResponseField>
+<ResponseField name="network" type="string">`stellar`, `celo`, or `bitcoin`.</ResponseField>
+<ResponseField name="assets" type="string[]">Assets this wallet can receive.</ResponseField>
+<ResponseField name="address" type="string">Primary on-chain deposit address.</ResponseField>
+<ResponseField name="memo" type="string">Stellar only. Must be included with every deposit.</ResponseField>
+<ResponseField name="lightning_addresses" type="object[]">Bitcoin only. Extra Lightning addresses attached to the wallet.</ResponseField>
+<ResponseField name="status" type="string">`active` or `disabled`.</ResponseField>
+
+## Lightning BTC addresses
+
+Lightning addresses are extra receiving addresses on a Bitcoin wallet. They let senders pay BTC instantly over the Lightning Network instead of waiting for on-chain confirmations. A Bitcoin wallet can have several Lightning addresses, for example one per customer or channel.
+
+| Type | `type` value | Reusable | Best for |
+| --- | --- | --- | --- |
+| Lightning address | `lightning_address` | Yes | A permanent, email-style address (`name@pay.peerpesa.co`) any Lightning wallet can pay |
+| Lightning invoice | `invoice` | No, single use | A fixed-amount payment request (BOLT11) that expires |
+
+### POST /wallets/&#123;id&#125;/lightning
+
+Adds a Lightning address or invoice to a Bitcoin wallet.
+
+<ParamField path="id" type="string" required>
+  ID of a wallet with `network: "bitcoin"`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  `lightning_address` or `invoice`.
+</ParamField>
+
+<ParamField body="username" type="string">
+  `lightning_address` only. The part before `@`. Generated automatically if omitted.
+</ParamField>
+
+<ParamField body="amount_sats" type="integer">
+  `invoice` only, required. Amount to request in satoshis.
+</ParamField>
+
+<ParamField body="description" type="string">
+  `invoice` only. Memo shown to the payer.
+</ParamField>
+
+<ParamField body="expires_in" type="integer" default="1800">
+  `invoice` only. Seconds until the invoice expires. Defaults to 30 minutes.
+</ParamField>
+
+<Tabs>
+  <Tab title="Lightning address">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/wallets/wal_9q1x5b/lightning \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{ "type": "lightning_address", "username": "cust4821" }'
+    ```
+
+    ```json Response
+    {
+      "id": "ln_4h7r2k",
+      "wallet_id": "wal_9q1x5b",
+      "type": "lightning_address",
+      "address": "cust4821@pay.peerpesa.co",
+      "lnurl": "LNURL1DP68GURN8GHJ7...",
+      "status": "active",
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+    ```
+  </Tab>
+  <Tab title="Invoice">
+    ```bash cURL
+    curl -X POST https://api.peerpesa.co/v1/wallets/wal_9q1x5b/lightning \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{ "type": "invoice", "amount_sats": 50000, "description": "Order 1042" }'
+    ```
+
+    ```json Response
+    {
+      "id": "ln_8m3t6w",
+      "wallet_id": "wal_9q1x5b",
+      "type": "invoice",
+      "payment_request": "lnbc500u1pj9x7...",
+      "amount_sats": 50000,
+      "description": "Order 1042",
+      "status": "pending",
+      "expires_at": "2026-10-15T05:30:00Z",
+      "created_at": "2026-10-15T05:00:00Z"
+    }
+    ```
+
+    Invoice statuses: `pending`, `paid`, `expired`. You receive a `lightning.invoice_paid` or `lightning.invoice_expired` [webhook](/webhooks).
+  </Tab>
+</Tabs>
+
+## Other wallet endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/wallets` | List wallets. Filter with `network` and paginate with `limit` and `cursor` |
+| `GET` | `/wallets/{id}` | Retrieve a wallet with its Lightning addresses |
+| `GET` | `/wallets/{id}/deposits` | List deposits received by the wallet |
+| `GET` | `/wallets/{id}/lightning` | List Lightning addresses and invoices on a Bitcoin wallet |
+| `DELETE` | `/wallets/{id}/lightning/{lightning_id}` | Disable a Lightning address |
+| `PATCH` | `/wallets/{id}` | Update `label` or set `status` to `disabled` |
+
+## Track deposits
+
+Subscribe to `deposit.detected`, `deposit.confirmed`, and `lightning.invoice_paid` [webhook events](/webhooks#event-types) to know when funds arrive. Each deposit includes the wallet `reference`, so you can credit the right customer.
+
+```json Deposit object
+{
+  "id": "dep_6r2w8n",
+  "wallet_id": "wal_9q1x5b",
+  "network": "bitcoin",
+  "asset": "BTC",
+  "amount": "0.00050000",
+  "channel": "lightning",
+  "tx_hash": null,
+  "status": "confirmed",
+  "reference": "cust_4821",
+  "created_at": "2026-10-15T05:04:11Z"
+}
+```
+
+`channel` is `on_chain` or `lightning`. On-chain deposits include `tx_hash` and `confirmations`.

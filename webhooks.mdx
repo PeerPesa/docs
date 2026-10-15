@@ -1,0 +1,243 @@
+---
+title: "Manage PeerPesa webhooks and verify event signatures"
+sidebarTitle: "Webhooks"
+description: "Register webhook endpoints, subscribe to PeerPesa transaction, deposit, quote, and KYC events, verify signatures, and handle retries in your server."
+---
+
+PeerPesa webhooks push real-time notifications to your server when something changes, such as a deposit confirming or an offramp payout completing. Instead of polling `GET /transactions`, register an HTTPS endpoint and PeerPesa sends a signed `POST` request for every event you subscribe to. This page covers managing endpoints, the event catalog, signature verification, and retries.
+
+## How webhooks work
+
+<Steps>
+  <Step title="Register an endpoint">
+    Create a webhook endpoint with your HTTPS URL and the events you want. PeerPesa returns a signing secret.
+  </Step>
+  <Step title="Receive events">
+    When an event occurs, PeerPesa sends a `POST` with a JSON body and a `PeerPesa-Signature` header.
+  </Step>
+  <Step title="Verify and acknowledge">
+    Verify the signature, return a `2xx` status within 10 seconds, then process the event asynchronously.
+  </Step>
+</Steps>
+
+<Note>
+  Sandbox and production have separate webhook endpoints and signing secrets. Register endpoints in each environment.
+</Note>
+
+## Manage webhook endpoints
+
+You can manage endpoints in the dashboard under **Settings** > **Webhooks**, or with the API.
+
+### POST /webhooks
+
+Registers a new endpoint.
+
+<ParamField body="url" type="string" required>
+  Public HTTPS URL that receives events.
+</ParamField>
+
+<ParamField body="events" type="string[]" required>
+  Event types to subscribe to. Use `["*"]` to receive every event.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Label to identify the endpoint.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/webhooks \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/peerpesa/webhooks",
+    "events": ["transaction.completed", "transaction.failed", "deposit.confirmed"],
+    "description": "Production payouts"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/webhooks", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    url: "https://example.com/peerpesa/webhooks",
+    events: ["transaction.completed", "transaction.failed", "deposit.confirmed"],
+    description: "Production payouts",
+  }),
+});
+const webhook = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "wh_5k2n8r",
+  "url": "https://example.com/peerpesa/webhooks",
+  "events": ["transaction.completed", "transaction.failed", "deposit.confirmed"],
+  "description": "Production payouts",
+  "status": "enabled",
+  "signing_secret": "whsec_4f8a1c9e2b...",
+  "created_at": "2026-10-15T05:00:00Z"
+}
+```
+
+<Warning>
+  `signing_secret` is returned only when the endpoint is created. Store it securely. You can roll it later with `POST /webhooks/{id}/roll-secret`.
+</Warning>
+
+### Other endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/webhooks` | List all endpoints |
+| `GET` | `/webhooks/{id}` | Retrieve one endpoint |
+| `PATCH` | `/webhooks/{id}` | Update `url`, `events`, `description`, or `status` (`enabled` / `disabled`) |
+| `DELETE` | `/webhooks/{id}` | Delete an endpoint. Returns `204` |
+| `POST` | `/webhooks/{id}/roll-secret` | Generate a new signing secret. The old one stays valid for 24 hours |
+| `POST` | `/webhooks/{id}/test` | Send a `webhook.test` event to the endpoint |
+| `GET` | `/webhooks/{id}/deliveries` | List recent delivery attempts with status codes |
+
+## Event types
+
+### Transactions
+
+| Event | Sent when |
+| --- | --- |
+| `transaction.created` | An onramp or offramp transaction is created |
+| `transaction.awaiting_payment` | An onramp is waiting for the payer's fiat payment |
+| `transaction.awaiting_deposit` | An offramp is waiting for the crypto deposit |
+| `transaction.processing` | Payment or deposit received and conversion or payout started |
+| `transaction.completed` | Crypto delivered (onramp) or fiat paid out (offramp) |
+| `transaction.failed` | The transaction failed. See `failure_code` |
+| `transaction.expired` | The quote expired before payment or deposit arrived |
+| `transaction.refunded` | Funds were returned to the payer or `refund_address` |
+
+### Deposits and wallets
+
+| Event | Sent when |
+| --- | --- |
+| `wallet.created` | A deposit wallet or Lightning address is created |
+| `deposit.detected` | An incoming deposit is seen on-chain but not yet confirmed |
+| `deposit.confirmed` | A deposit reaches the required confirmations and is credited |
+| `deposit.failed` | A deposit could not be credited (for example, wrong asset or missing Stellar memo) |
+| `lightning.invoice_paid` | A Lightning invoice was paid |
+| `lightning.invoice_expired` | A Lightning invoice expired unpaid |
+
+### Quotes, beneficiaries, and account
+
+| Event | Sent when |
+| --- | --- |
+| `quote.expired` | A quote passed its 30-minute validity window unused |
+| `beneficiary.created` | A beneficiary was added |
+| `beneficiary.deleted` | A beneficiary was removed |
+| `kyc.approved` | KYC verification was approved |
+| `kyc.action_required` | Compliance needs more information |
+| `kyc.rejected` | KYC verification was rejected |
+| `network.status_changed` | A network moved between `operational`, `degraded`, and `down` |
+| `webhook.test` | Sent by `POST /webhooks/{id}/test` |
+
+### Recurring payments
+
+| Event | Sent when |
+| --- | --- |
+| `recurring_payment.activated` | A recurring payment was reviewed and activated |
+| `recurring_payment.run_upcoming` | A run is scheduled within the next 24 hours |
+| `recurring_payment.run_succeeded` | A scheduled run created its transaction successfully |
+| `recurring_payment.run_failed` | A scheduled run failed, for example `insufficient_balance` |
+| `recurring_payment.paused` | A recurring payment was paused manually or after repeated failures |
+| `recurring_payment.completed` | The final scheduled run finished |
+| `recurring_payment.cancelled` | A recurring payment was cancelled |
+
+## Event payload
+
+Every event uses the same envelope. `data.object` contains the full resource at the time of the event.
+
+```json transaction.completed
+{
+  "id": "evt_2p9x4m",
+  "type": "transaction.completed",
+  "created_at": "2026-10-15T05:12:43Z",
+  "livemode": true,
+  "data": {
+    "object": {
+      "id": "txn_9d4h2p",
+      "type": "offramp",
+      "status": "completed",
+      "network": "stellar",
+      "asset": "USDC",
+      "fiat_currency": "KES",
+      "source_amount": "100.00",
+      "destination_amount": "12750.83",
+      "fee": { "total": "1.50", "currency": "USDC", "processing_fee": "1.00", "network_fee": "0.50" },
+      "tx_hash": "a3f9c2...e81b",
+      "reference": "payout-1042"
+    }
+  }
+}
+```
+
+<ResponseField name="id" type="string">Unique event ID. Use it to deduplicate.</ResponseField>
+<ResponseField name="type" type="string">Event type from the tables above.</ResponseField>
+<ResponseField name="livemode" type="boolean">`true` for production, `false` for sandbox.</ResponseField>
+<ResponseField name="data.object" type="object">The resource the event describes.</ResponseField>
+
+## Verify signatures
+
+Each request includes a `PeerPesa-Signature` header in the form `t=<timestamp>,v1=<signature>`. The signature is an HMAC-SHA256 of `<timestamp>.<raw request body>` using your signing secret.
+
+<Steps>
+  <Step title="Parse the header">
+    Split the header on `,` to get `t` (Unix timestamp) and `v1` (hex signature).
+  </Step>
+  <Step title="Compute the expected signature">
+    Build the string `t + "." + rawBody` and compute HMAC-SHA256 with your signing secret.
+  </Step>
+  <Step title="Compare and check freshness">
+    Compare signatures with a constant-time function and reject events whose timestamp is older than 5 minutes.
+  </Step>
+</Steps>
+
+```javascript Node.js (Express)
+import crypto from "crypto";
+import express from "express";
+
+const app = express();
+
+app.post("/peerpesa/webhooks", express.raw({ type: "application/json" }), (req, res) => {
+  const header = req.get("PeerPesa-Signature") || "";
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const expected = crypto
+    .createHmac("sha256", process.env.PEERPESA_WEBHOOK_SECRET)
+    .update(`${parts.t}.${req.body}`)
+    .digest("hex");
+
+  const valid =
+    parts.v1 &&
+    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1)) &&
+    Math.abs(Date.now() / 1000 - Number(parts.t)) < 300;
+
+  if (!valid) return res.status(400).send("Invalid signature");
+
+  const event = JSON.parse(req.body);
+  res.sendStatus(200); // acknowledge first
+  handleEvent(event);  // then process asynchronously
+});
+```
+
+<Warning>
+  Verify against the raw request body. Parsing and re-serializing the JSON changes the bytes and breaks the signature.
+</Warning>
+
+## Retries and best practices
+
+- Return a `2xx` status within **10 seconds**. Any other response or a timeout counts as a failure.
+- Failed deliveries are retried with exponential backoff for up to **3 days** (about 1m, 5m, 30m, 2h, 6h, then every 12h).
+- After repeated failures, the endpoint is set to `disabled` and you are notified by email. Re-enable it with `PATCH /webhooks/{id}`.
+- Events can arrive more than once or out of order. Deduplicate on event `id` and re-fetch the resource with the API if you need the latest state.
+- Only accept requests with a valid signature, and use HTTPS for every endpoint.

@@ -1,0 +1,178 @@
+---
+title: "Offramp: convert crypto to mobile money or bank fiat"
+sidebarTitle: "Offramp"
+description: "Confirm an offramp quote to convert XLM, USDC, USDT, CELO, or cUSD into KES, TZS, NGN, ZAR, or ZMW paid to a beneficiary's mobile money or bank account."
+---
+
+An offramp converts crypto on Stellar or Celo into local fiat and pays it to a saved beneficiary. You confirm an active offramp quote, PeerPesa returns a deposit address, and the fiat payout starts once your deposit confirms on-chain.
+
+## How an offramp works
+
+<Steps>
+  <Step title="Create a beneficiary">
+    Save the recipient's mobile money or bank details with [POST /beneficiaries](/api-reference/beneficiaries).
+  </Step>
+  <Step title="Generate a quote">
+    Call [POST /quotes](/api-reference/quotes) with `type: "offramp"`. The quote locks the rate and fee for 30 minutes.
+  </Step>
+  <Step title="Confirm the quote">
+    Call `POST /quotes/{id}/confirm` with the `beneficiary_id` and `refund_address`.
+  </Step>
+  <Step title="Send the deposit">
+    Send exactly `deposit.amount` of `deposit.asset` to `deposit.address` before `deposit.deposit_by`. On Stellar, include `deposit.memo`.
+  </Step>
+  <Step title="Track the payout">
+    Poll [GET /transactions/\{id\}](/api-reference/transactions) until the status is `completed`.
+  </Step>
+</Steps>
+
+<Warning>
+  Stellar deposits must include the `memo` exactly as returned. Deposits without the correct memo cannot be matched to your transaction.
+</Warning>
+
+## Confirm an offramp quote
+
+**POST** `/quotes/{id}/confirm`
+
+Confirms an active `offramp` quote and creates the offramp transaction.
+
+<ParamField path="id" type="string" required>
+  ID of an active `offramp` quote, for example `qt_8f2k...`. Expired or already confirmed quotes are rejected.
+</ParamField>
+
+<ParamField body="beneficiary_id" type="string" required>
+  ID of the beneficiary who receives the fiat payout. Its currency and method must match the quote.
+</ParamField>
+
+<ParamField body="refund_address" type="string" required>
+  Wallet address on the quote's network where PeerPesa returns funds if the payout fails.
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Your own identifier for this transaction, returned on the transaction object.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k1x9a/confirm \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "beneficiary_id": "ben_3m7q2c",
+    "refund_address": "GBX4...7KQ2",
+    "reference": "payout-1042"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k1x9a/confirm", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    beneficiary_id: "ben_3m7q2c",
+    refund_address: "GBX4...7KQ2",
+    reference: "payout-1042",
+  }),
+});
+const transaction = await res.json();
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "id": "txn_9d4h2p",
+  "type": "offramp",
+  "status": "awaiting_deposit",
+  "quote_id": "qt_8f2k1x9a",
+  "network": "stellar",
+  "asset": "USDC",
+  "fiat_currency": "KES",
+  "rate": "129.45",
+  "source_amount": "100.00",
+  "destination_amount": "12750.83",
+  "fee": {
+    "total": "1.50",
+    "currency": "USDC",
+    "processing_fee": "1.00",
+    "network_fee": "0.50"
+  },
+  "beneficiary_id": "ben_3m7q2c",
+  "tx_hash": null,
+  "reference": "payout-1042",
+  "deposit": {
+    "address": "GCPP...PESA",
+    "memo": "4829173",
+    "amount": "100.00",
+    "asset": "USDC",
+    "network": "stellar",
+    "deposit_by": "2026-10-15T05:30:00Z"
+  },
+  "created_at": "2026-10-15T05:00:00Z",
+  "updated_at": "2026-10-15T05:00:00Z"
+}
+```
+
+<ResponseField name="status" type="string">
+  Starts as `awaiting_deposit`, then moves to `processing` and `completed`. See [transaction statuses](/api-reference/transactions).
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown carried over from the quote.
+
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee charged.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Currency of the fee.
+    </ResponseField>
+
+    <ResponseField name="processing_fee" type="string">
+      PeerPesa processing fee.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Blockchain network fee.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="deposit" type="object">
+  Where and how to send the crypto.
+
+  <Expandable title="properties">
+    <ResponseField name="address" type="string">
+      Deposit address on the quote's network.
+    </ResponseField>
+
+    <ResponseField name="memo" type="string">
+      Required on Stellar. Not returned for Celo.
+    </ResponseField>
+
+    <ResponseField name="amount" type="string">
+      Exact amount to send.
+    </ResponseField>
+
+    <ResponseField name="asset" type="string">
+      Asset to send.
+    </ResponseField>
+
+    <ResponseField name="network" type="string">
+      `stellar` or `celo`.
+    </ResponseField>
+
+    <ResponseField name="deposit_by" type="string">
+      Deadline for the deposit. Equal to the quote's `expires_at`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  If the deposit does not arrive before `deposit_by`, the transaction becomes `expired`. Generate a new quote and create a new offramp.
+</Note>

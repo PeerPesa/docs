@@ -1,0 +1,158 @@
+---
+title: "Query PeerPesa Network Status and Blockchain Stats"
+sidebarTitle: "Network Stats"
+description: "Check blockchain network health, latest block, average confirmation times, and network fees before creating quotes and transactions via the PeerPesa API."
+---
+
+The PeerPesa API exposes network conditions so you can verify that a supported blockchain is operational before generating quotes or submitting transactions. Each network entry includes a status indicator, the latest block height, average confirmation time, and the current network fee.
+
+<Note>
+  Network stats are purely informational. Always validate the desired network is `operational` before calling POST /quotes to avoid degraded service or delayed settlements.
+</Note>
+
+## Get network statistics
+
+```http
+GET /network/stats?network={network}
+```
+
+Retrieve the status and latest statistics for all supported networks, or filter to a single network using the optional `network` query parameter.
+
+### Query parameters
+
+<ParamField query="network" type="string" required={false}>
+  Filter to a single network. Accepted values: `stellar`, `celo`.
+</ParamField>
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+# All networks
+curl -X GET "https://api.peerpesa.co/v1/network/stats" \
+  -H "Authorization: Bearer <access_token>"
+
+# Single network
+curl -X GET "https://api.peerpesa.co/v1/network/stats?network=stellar" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+```javascript JavaScript
+// All networks
+fetch("https://api.peerpesa.co/v1/network/stats", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <access_token>",
+    "Content-Type": "application/json"
+  }
+});
+
+// Single network
+fetch("https://api.peerpesa.co/v1/network/stats?network=stellar", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <access_token>",
+    "Content-Type": "application/json"
+  }
+});
+```
+
+</CodeGroup>
+
+### Response example
+
+```json
+{
+  "networks": [
+    {
+      "network": "stellar",
+      "status": "operational",
+      "latest_block": "52144873",
+      "avg_confirmation_seconds": 5,
+      "network_fee": {
+        "amount": "0.00001",
+        "currency": "XLM"
+      },
+      "assets": [
+        "XLM",
+        "USDC"
+      ],
+      "updated_at": "2024-06-12T09:23:17Z"
+    },
+    {
+      "network": "celo",
+      "status": "operational",
+      "latest_block": "28540112",
+      "avg_confirmation_seconds": 5,
+      "network_fee": {
+        "amount": "0.001",
+        "currency": "CELO"
+      },
+      "assets": [
+        "CELO",
+        "USDT",
+        "USDC",
+        "CUSD"
+      ],
+      "updated_at": "2024-06-12T09:23:10Z"
+    }
+  ]
+}
+```
+
+### Response fields
+
+<ResponseField name="networks" type="array" required>
+  List of supported blockchain networks.
+
+  <Expandable title="Network object">
+    <ResponseField name="network" type="string" required>
+      The network identifier. One of: `stellar`, `celo`.
+    </ResponseField>
+
+    <ResponseField name="status" type="string" required>
+      Current operational status. See the status meanings table below.
+    </ResponseField>
+
+    <ResponseField name="latest_block" type="string" required>
+      The most recent block height indexed by PeerPesa.
+    </ResponseField>
+
+    <ResponseField name="avg_confirmation_seconds" type="integer" required>
+      Average time in seconds for a transaction to receive finality on this network.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="object" required>
+      <Expandable title="Fee breakdown">
+        <ResponseField name="amount" type="string" required>
+          Fee amount as a decimal string.
+        </ResponseField>
+
+        <ResponseField name="currency" type="string" required>
+          Asset code for the fee denomination.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="assets" type="array" required>
+      Supported assets on this network (e.g. `XLM`, `USDC`, `CELO`, `USDT`, `CUSD`).
+    </ResponseField>
+
+    <ResponseField name="updated_at" type="string" required>
+      ISO 8601 UTC timestamp of the last stats refresh.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Status meanings
+
+| Status | Meaning |
+| --- | --- |
+| `operational` | Network is healthy and transactions are processing normally. |
+| `degraded` | Transactions may be slower or have intermittent issues. Proceed with caution. |
+| `down` | Network is unavailable. Do not create quotes or submit transactions. |
+
+<Warning>
+  If a network status is `degraded` or `down`, quotes and transactions targeting that network may fail or experience significant delays. Wait for `operational` status before proceeding with time-sensitive ramps.
+</Warning>

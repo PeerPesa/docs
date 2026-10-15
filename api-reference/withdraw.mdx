@@ -1,0 +1,441 @@
+---
+title: "Withdraw Stablecoins from PeerPesa to Fiat Currency"
+description: "Withdraw stablecoins to fiat via mobile money or bank transfer using saved beneficiaries. Request quotes and execute withdrawals securely."
+sidebarTitle: "Withdraw"
+---
+
+PeerPesa lets you cash out stablecoin balances to African fiat currencies via saved beneficiaries. Initiate a withdrawal by requesting a locked 30-minute quote, then execute it using the returned `quote_id`. This page covers the full flow, including how to preview fees, submit a cash-out, and track the resulting wallet transaction.
+
+## How withdrawals work
+
+Withdrawals move funds from your on-chain PeerPesa balance to a beneficiary you have already saved, such as a mobile money number or a bank account. Because the conversion from stablecoin to fiat involves an exchange rate and possible fees, PeerPesa requires a two-step quote model:
+
+1. Call `POST /wallet/withdraw/quote` to lock a rate and fee breakdown for 30 minutes.
+2. Call `POST /wallet/withdraw` with the `quote_id` to execute the cash-out.
+
+If the quote expires, you must request a new one. You can track the status of a completed withdrawal through the transaction object or via webhook events.
+
+<Note>
+  To send crypto to an external wallet address instead of cashing out to fiat, use the [Send](/api-reference/send) endpoint.
+</Note>
+
+<Note>
+  Fiat withdrawals are subject to the limits returned by [GET /profile/limits](/api-reference/profile).
+</Note>
+
+## Prerequisites
+
+Before you withdraw, make sure you have:
+
+- A valid API token with wallet permissions. See [Authentication](/authentication).
+- A saved beneficiary for the target fiat currency and payout method. See [Beneficiaries](/api-reference/beneficiaries).
+- Sufficient balance in the stablecoin you intend to withdraw.
+
+## Withdrawal flow
+
+<Steps>
+  <Step title="Add a beneficiary">
+    Use the [Beneficiaries](/api-reference/beneficiaries) endpoints to save a mobile money number or bank account for the fiat currency you want to receive.
+  </Step>
+  <Step title="Check your balance">
+    Verify your available balance with [GET /wallet/balances](/api-reference/balances) or by fetching your balance for the specific `symbol` and `network` you plan to withdraw.
+  </Step>
+  <Step title="Request a quote">
+    Call `POST /wallet/withdraw/quote` to lock a rate and preview fees. The quote is valid for exactly 30 minutes.
+  </Step>
+  <Step title="Execute the withdrawal">
+    Call `POST /wallet/withdraw` with the `quote_id`. The response returns a wallet transaction with `status` set to `processing`.
+  </Step>
+  <Step title="Track the transaction">
+    Poll [GET /transactions/](/api-reference/transactions){id} or listen for webhook events (`transaction.processing`, `transaction.completed`, `transaction.failed`).
+  </Step>
+</Steps>
+
+## Request a withdrawal quote
+
+<ParamField path="POST" type="/wallet/withdraw/quote">
+  Lock a rate and fee preview for a fiat withdrawal. The quote expires exactly 30 minutes after creation.
+</ParamField>
+
+### Headers
+
+| Header | Value | Required |
+| --- | --- | --- |
+| Authorization | Bearer `<token>` | Yes |
+| Content-Type | application/json | Yes |
+| Idempotency-Key | UUID or unique string | No |
+
+### Body parameters
+
+<ParamField body="symbol" type="string" required>
+  The stablecoin asset to withdraw. Use values returned by [GET /currencies](/api-reference/coins), for example `USDC`.
+</ParamField>
+
+<ParamField body="network" type="string" required>
+  The blockchain network for the source asset. Use uppercase network codes from [GET /currencies](/api-reference/coins), for example `STELLAR` or `CELO`. Only networks with `status: active` can be used.
+</ParamField>
+
+<ParamField body="fiat_currency" type="string" required>
+  The fiat currency to receive. Supported values: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  The amount to withdraw, expressed as a decimal string. The precision depends on the asset.
+</ParamField>
+
+<ParamField body="amount_currency" type="string" required>
+  The currency of the `amount` value. Must be either the `symbol` of the stablecoin or the `fiat_currency` code. This tells PeerPesa whether you are specifying the source stablecoin amount or the destination fiat amount.
+</ParamField>
+
+<ParamField body="beneficiary_id" type="string" required>
+  The ID of a saved beneficiary matching the target `fiat_currency` and payout method. Use the [Beneficiaries](/api-reference/beneficiaries) endpoints to manage beneficiaries.
+</ParamField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/withdraw/quote \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: withdraw-quote-001" \
+  -d '{
+    "symbol": "USDC",
+    "network": "CELO",
+    "fiat_currency": "KES",
+    "amount": "50.00",
+    "amount_currency": "USDC",
+    "beneficiary_id": "ben_abc123"
+  }'
+```
+
+```js JavaScript
+const response = await fetch("https://api.peerpesa.co/v1/wallet/withdraw/quote", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+    "Idempotency-Key": "withdraw-quote-001"
+  },
+  body: JSON.stringify({
+    symbol: "USDC",
+    network: "CELO",
+    fiat_currency: "KES",
+    amount: "50.00",
+    amount_currency: "USDC",
+    beneficiary_id: "ben_abc123"
+  })
+});
+
+const quote = await response.json();
+console.log(quote);
+```
+
+</CodeGroup>
+
+### Response
+
+<ResponseField name="id" type="string">
+  The unique quote identifier. Pass this to `POST /wallet/withdraw` to execute the cash-out.
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  The stablecoin asset being withdrawn.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  The source blockchain network.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string">
+  The target fiat currency.
+</ResponseField>
+
+<ResponseField name="rate" type="string">
+  The exchange rate used for this quote, expressed as a decimal string.
+</ResponseField>
+
+<ResponseField name="source_amount" type="string">
+  The amount debited from your wallet, in the stablecoin `symbol`.
+</ResponseField>
+
+<ResponseField name="destination_amount" type="string">
+  The amount the beneficiary receives, in the `fiat_currency`.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee deducted from the withdrawal.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Currency in which the fee amount is denominated.
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      The platform fee portion.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      The on-chain or settlement network fee portion.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601 timestamp indicating when the quote expires. Quotes are locked for exactly 30 minutes from creation.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp when the quote was created.
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "id": "quo_withdraw_xyz789",
+  "symbol": "USDC",
+  "network": "CELO",
+  "fiat_currency": "KES",
+  "rate": "128.50",
+  "source_amount": "50.00",
+  "destination_amount": "6355.00",
+  "fee": {
+    "total": "1.25",
+    "currency": "USDC",
+    "app_fee": "1.00",
+    "network_fee": "0.25"
+  },
+  "expires_at": "2024-01-15T09:30:00Z",
+  "created_at": "2024-01-15T09:00:00Z"
+}
+```
+
+## Execute a withdrawal
+
+<ParamField path="POST" type="/wallet/withdraw">
+  Execute a fiat withdrawal using a valid quote ID. The response returns a wallet transaction with `status` set to `processing`.
+</ParamField>
+
+### Headers
+
+| Header | Value | Required |
+| --- | --- | --- |
+| Authorization | Bearer `<token>` | Yes |
+| Content-Type | application/json | Yes |
+| Idempotency-Key | UUID or unique string | No |
+
+### Body parameters
+
+<ParamField body="quote_id" type="string" required>
+  The `id` returned by `POST /wallet/withdraw/quote`. Must not be expired.
+</ParamField>
+
+<ParamField body="reference" type="string">
+  An optional client-supplied reference string for reconciliation. Only visible to you.
+</ParamField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/withdraw \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: withdraw-exec-001" \
+  -d '{
+    "quote_id": "quo_withdraw_xyz789",
+    "reference": "payout-jan-15"
+  }'
+```
+
+```js JavaScript
+const response = await fetch("https://api.peerpesa.co/v1/wallet/withdraw", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+    "Idempotency-Key": "withdraw-exec-001"
+  },
+  body: JSON.stringify({
+    quote_id: "quo_withdraw_xyz789",
+    reference: "payout-jan-15"
+  })
+});
+
+const transaction = await response.json();
+console.log(transaction);
+```
+
+</CodeGroup>
+
+### Response
+
+The response is a wallet transaction object with additional withdrawal-specific fields.
+
+<ResponseField name="id" type="string">
+  The wallet transaction ID. Use it to poll [GET /transactions/](/api-reference/transactions){id}.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `withdraw` for this endpoint.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  One of `pending`, `processing`, `completed`, `failed`, or `refunded`. After a successful creation, this is typically `processing`.
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  The stablecoin asset that was withdrawn.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  The source blockchain network.
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  The gross stablecoin amount that was debited.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Fee currency.
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      Platform fee portion.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Network fee portion.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  The amount after fees.
+</ResponseField>
+
+<ResponseField name="reference" type="string">
+  The optional client reference you provided, if any.
+</ResponseField>
+
+<ResponseField name="tx_hash" type="string | null">
+  An on-chain transaction hash, if available. This may be null for fiat settlements that occur off-chain.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>
+
+<ResponseField name="beneficiary_id" type="string">
+  The beneficiary used for this withdrawal.
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string">
+  The fiat currency the beneficiary receives.
+</ResponseField>
+
+<ResponseField name="destination_amount" type="string">
+  The exact fiat amount delivered to the beneficiary.
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "id": "txn_withdraw_abc456",
+  "type": "withdraw",
+  "status": "processing",
+  "symbol": "USDC",
+  "network": "CELO",
+  "amount": "50.00",
+  "fee": {
+    "total": "1.25",
+    "currency": "USDC",
+    "app_fee": "1.00",
+    "network_fee": "0.25"
+  },
+  "net_amount": "48.75",
+  "reference": "payout-jan-15",
+  "tx_hash": null,
+  "created_at": "2024-01-15T09:05:00Z",
+  "updated_at": "2024-01-15T09:05:00Z",
+  "beneficiary_id": "ben_abc123",
+  "fiat_currency": "KES",
+  "destination_amount": "6355.00"
+}
+```
+
+## Track a withdrawal
+
+After executing a withdrawal, monitor its progress using one of the following methods:
+
+- Poll [GET /transactions/](/api-reference/transactions){id} with the transaction ID.
+- Listen for [webhook](/webhooks) events:
+  - `transaction.processing` — the withdrawal has been accepted and is being settled.
+  - `transaction.completed` — the fiat funds have been delivered to the beneficiary.
+  - `transaction.failed` — the withdrawal could not be completed. The status will be `failed` or `refunded`.
+
+<Warning>
+  Receipt of `transaction.completed` is the safest signal that the beneficiary has been paid. Do not update your own records solely based on the `POST /wallet/withdraw` response, because that only confirms submission.
+</Warning>
+
+## Error codes
+
+The following errors are commonly returned by the withdrawal endpoints. All errors follow the standard shape:
+
+```json
+{
+  "error": {
+    "code": "insufficient_balance",
+    "message": "Wallet balance is too low for this withdrawal.",
+    "param": "amount",
+    "request_id": "req_abc123"
+  }
+}
+```
+
+| HTTP status | Code | Meaning | What to do |
+| --- | --- | --- | --- |
+| 422 | `insufficient_balance` | Your wallet balance is too low. | Reduce the amount or fund your wallet first. |
+| 422 | `amount_too_low` | The amount is below the minimum allowed. | Increase the amount to at least the network minimum. |
+| 422 | `amount_too_high` | The amount exceeds the maximum allowed. | Decrease the amount or check your [profile limits](/api-reference/profile). |
+| 422 | `unsupported_network` | The requested network is not available. | Use an active network from [GET /currencies](/api-reference/coins). |
+| 422 | `unsupported_asset` | The asset is not supported on this network. | Check supported assets with [GET /currencies](/api-reference/coins). |
+| 422 | `quote_expired` | The quote `expires_at` has passed. | Request a new quote before executing. |
+| 422 | `beneficiary_mismatch` | The beneficiary does not match the quote or fiat currency. | Verify the `beneficiary_id` and `fiat_currency` pairing. |
+| 404 | `recipient_not_found` | The beneficiary was not found or is inactive. | Confirm the beneficiary ID with [GET /beneficiaries](/api-reference/beneficiaries). |
+| 503 | `network_unavailable` | The settlement network is temporarily down. | Retry with exponential backoff or wait for maintenance to complete. |
+
+## Environments and idempotency
+
+Use the following base URLs depending on the stage of your integration:
+
+<Tabs>
+  <Tab title="Production">
+    `https://api.peerpesa.co/v1`
+  </Tab>
+  <Tab title="Sandbox">
+    `https://sandbox-api.peerpesa.co/v1`
+  </Tab>
+</Tabs>
+
+You can supply an `Idempotency-Key` header on all `POST` requests to prevent duplicate operations. If a request with the same key is retried while the original is still processing, PeerPesa returns the same response.
+
+## Limits and fees
+
+Withdrawal limits and fees depend on your account tier and the destination fiat currency. Always inspect the `fee` object in the quote response before executing a withdrawal. For account-level limits, refer to [GET /profile/limits](/api-reference/profile).

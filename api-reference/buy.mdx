@@ -1,0 +1,424 @@
+---
+title: "Buy crypto with fiat into your PeerPesa balance"
+sidebarTitle: "Buy"
+description: "Generate a locked buy quote, then execute it to purchase crypto with fiat via mobile money or bank transfer."
+---
+
+Use the buy endpoints to purchase cryptocurrency with fiat and credit it directly to your PeerPesa wallet balance. Buy is different from the onramp flow: buy credits your PeerPesa balance, while onramp delivers crypto to an external wallet.
+
+The flow is two steps: first request a locked quote with your desired fiat amount and payment method, then execute the quote. Quotes lock the rate and fees for exactly 30 minutes.
+
+<Tabs>
+  <Tab title="Sandbox">
+    ```text
+    Base URL: https://sandbox-api.peerpesa.co/v1
+    ```
+  </Tab>
+  <Tab title="Production">
+    ```text
+    Base URL: https://api.peerpesa.co/v1
+    ```
+  </Tab>
+</Tabs>
+
+All requests require an `Authorization: Bearer <token>` header. POST endpoints also accept an optional `Idempotency-Key` header to prevent duplicate transactions. Amounts are decimal strings. Network codes are uppercase as returned by [GET /currencies](/api-reference/coins): `STELLAR`, `CELO`, `BITCOIN`.
+
+---
+
+## Generate a buy quote
+
+Request a quote for buying crypto with fiat. The returned quote is locked for 30 minutes.
+
+### Endpoint
+
+```text
+POST /wallet/buy/quote
+```
+
+### Request headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional unique key to prevent duplicate quote creation
+</ParamField>
+
+### Request body
+
+<ParamField body="symbol" type="string" required>
+  Crypto token to buy, e.g. `USDC`, `USDT`, `BTC`
+</ParamField>
+
+<ParamField body="network" type="string" required>
+  Blockchain network, e.g. `STELLAR`, `CELO`, `BITCOIN`
+</ParamField>
+
+<ParamField body="fiat_currency" type="string" required>
+  Fiat currency to pay with, e.g. `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount as a decimal string
+</ParamField>
+
+<ParamField body="amount_currency" type="string" required>
+  Currency of the amount: `fiat` or `crypto`
+</ParamField>
+
+<ParamField body="method" type="string" required>
+  Payment method: `mobile_money` or `bank_transfer`
+</ParamField>
+
+### Response fields
+
+<ResponseField name="id" type="string">
+  Quote ID, e.g. `bq_...`
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  Crypto symbol
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Network code
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string">
+  Fiat currency used
+</ResponseField>
+
+<ResponseField name="fiat_amount" type="string">
+  Fiat amount to pay
+</ResponseField>
+
+<ResponseField name="crypto_amount" type="string">
+  Crypto amount you will receive
+</ResponseField>
+
+<ResponseField name="rate" type="string">
+  Exchange rate used (fiat per crypto unit)
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown:
+
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee in fiat
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Fee currency (fiat)
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      Platform fee
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Network fee
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="method" type="string">
+  Payment method
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601 timestamp. Quote expires 30 minutes after created_at.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/buy/quote \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "USDC",
+    "network": "STELLAR",
+    "fiat_currency": "KES",
+    "amount": "5000.00",
+    "amount_currency": "fiat",
+    "method": "mobile_money"
+  }'
+```
+
+```js JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/wallet/buy/quote", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    symbol: "USDC",
+    network: "STELLAR",
+    fiat_currency: "KES",
+    amount: "5000.00",
+    amount_currency: "fiat",
+    method: "mobile_money",
+  }),
+});
+const data = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "id": "bq_2vT8xKpQrLmN9wZc",
+  "symbol": "USDC",
+  "network": "STELLAR",
+  "fiat_currency": "KES",
+  "fiat_amount": "5000.00",
+  "crypto_amount": "38.46153846",
+  "rate": "130.00",
+  "fee": {
+    "total": "75.00",
+    "currency": "KES",
+    "app_fee": "50.00",
+    "network_fee": "25.00"
+  },
+  "method": "mobile_money",
+  "expires_at": "2024-01-15T14:30:00Z",
+  "created_at": "2024-01-15T14:00:00Z"
+}
+```
+
+---
+
+## Execute a buy
+
+Execute a previously generated buy quote to create a pending buy transaction. Payment instructions are returned in the response.
+
+### Endpoint
+
+```text
+POST /wallet/buy
+```
+
+### Request headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token
+</ParamField>
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional unique key to prevent duplicate execution
+</ParamField>
+
+### Request body
+
+<ParamField body="quote_id" type="string" required>
+  ID of the buy quote to execute, e.g. `bq_2vT8xKpQrLmN9wZc`
+</ParamField>
+
+<ParamField body="payer" type="object">
+  Payer details. Required for `mobile_money`.
+
+  <Expandable title="properties">
+    <ResponseField name="phone_number" type="string">
+      Mobile money phone number (required for mobile_money)
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="reference" type="string">
+  Optional external reference string
+</ParamField>
+
+### Response fields
+
+The response is a wallet transaction object with extra fields for payment instructions.
+
+<ResponseField name="id" type="string">
+  Transaction ID, e.g. `txn_...`
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `buy`
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `pending` until payment is received, then `processing` or `completed`
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  Crypto symbol
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Network code
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Crypto amount purchased
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown as in the quote
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  Net crypto amount credited after fees
+</ResponseField>
+
+<ResponseField name="reference" type="string" nullable>
+  External reference if provided
+</ResponseField>
+
+<ResponseField name="tx_hash" type="string" nullable>
+  On-chain transaction hash (null until completed)
+</ResponseField>
+
+<ResponseField name="payment_instructions" type="object">
+  Instructions for completing payment:
+
+  <Expandable title="properties">
+    <ResponseField name="method" type="string">
+      `mobile_money` or `bank_transfer`
+    </ResponseField>
+
+    <ResponseField name="phone_number" type="string">
+      For mobile_money: STK push target number
+    </ResponseField>
+
+    <ResponseField name="account_number" type="string">
+      For bank_transfer: bank account number
+    </ResponseField>
+
+    <ResponseField name="bank_name" type="string">
+      For bank_transfer: bank name
+    </ResponseField>
+
+    <ResponseField name="reference" type="string">
+      Payment reference to include
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+### Example request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/wallet/buy \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "quote_id": "bq_2vT8xKpQrLmN9wZc",
+    "payer": {
+      "phone_number": "+254712345678"
+    },
+    "reference": "order_12345"
+  }'
+```
+
+```js JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/wallet/buy", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    quote_id: "bq_2vT8xKpQrLmN9wZc",
+    payer: { phone_number: "+254712345678" },
+    reference: "order_12345",
+  }),
+});
+const data = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example response
+
+```json
+{
+  "id": "txn_aBc3DeFg4HiJ5kL6",
+  "type": "buy",
+  "status": "pending",
+  "symbol": "USDC",
+  "network": "STELLAR",
+  "amount": "38.46153846",
+  "fee": {
+    "total": "75.00",
+    "currency": "KES",
+    "app_fee": "50.00",
+    "network_fee": "25.00"
+  },
+  "net_amount": "38.46153846",
+  "reference": "order_12345",
+  "tx_hash": null,
+  "payment_instructions": {
+    "method": "mobile_money",
+    "phone_number": "+254712345678",
+    "reference": "PPB123456"
+  },
+  "created_at": "2024-01-15T14:05:00Z",
+  "updated_at": "2024-01-15T14:05:00Z"
+}
+```
+
+<Note>
+  After execution, complete the payment using the returned instructions. Your balance is credited once the payment is received. Track progress with [GET /transactions/](/api-reference/transactions){id} or listen for [webhook](/webhooks) events `transaction.processing`, `transaction.completed`, and `transaction.failed`.
+</Note>
+
+---
+
+## Error codes
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `unsupported_network` | 422 | The requested network is not active or available for buying |
+| `unsupported_asset` | 422 | The requested symbol/network combination is not supported |
+| `amount_too_low` | 422 | The amount is below the minimum for this asset and network |
+| `amount_too_high` | 422 | The amount exceeds the maximum for this asset and network |
+| `quote_expired` | 422 | The quote expired after 30 minutes. Request a new quote |
+| `insufficient_balance` | 422 | (Execute only) Your fiat balance is insufficient to cover the amount |
+| `network_unavailable` | 503 | The target network is temporarily unavailable |
+
+---
+
+## Step-by-step flow
+
+<Steps>
+  <Step title="Request a quote">
+    Call `POST /wallet/buy/quote` with your desired crypto, network, fiat amount, and payment method.
+  </Step>
+  <Step title="Review the quote">
+    Check the `rate`, `fee`, and `crypto_amount`. The quote is valid for 30 minutes from `created_at`.
+  </Step>
+  <Step title="Execute the quote">
+    Call `POST /wallet/buy` with the `quote_id`. Include `payer.phone_number` for mobile money.
+  </Step>
+  <Step title="Complete payment">
+    Follow the `payment_instructions` in the response. Bank transfers require the provided reference.
+  </Step>
+  <Step title="Track completion">
+    Poll [GET /transactions/](/api-reference/transactions){id} or wait for [webhook](/webhooks) events.
+  </Step>
+</Steps>

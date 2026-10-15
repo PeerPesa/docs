@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "theme": "luma",
+  "name": "PeerPesa",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -9,29 +9,70 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "index",
+              "kyc-verification",
+              "authentication",
+              "supported-currencies"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "webhooks",
+              "errors"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Network",
+            "pages": [
+              "api-reference/network-stats",
+              "api-reference/coins",
+              "api-reference/rates"
+            ]
+          },
+          {
+            "group": "Ramps",
+            "pages": [
+              "api-reference/quotes",
+              "api-reference/onramp",
+              "api-reference/offramp"
+            ]
+          },
+          {
+            "group": "Wallet Operations",
+            "pages": [
+              "api-reference/balances",
+              "api-reference/deposit-wallets",
+              "api-reference/withdraw",
+              "api-reference/send",
+              "api-reference/buy",
+              "api-reference/swap",
+              "api-reference/recurring-payments"
+            ]
+          },
+          {
+            "group": "Account & Records",
+            "pages": [
+              "api-reference/profile",
+              "api-reference/transactions",
+              "api-reference/beneficiaries"
+            ]
+          }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -41,13 +82,13 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:support@mintlify.com"
+        "href": "https://peerpesa.co/faqs"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "label": "PeerPesa",
+      "href": "https://peerpesa.co"
     }
   },
   "contextual": {
@@ -64,9 +105,7 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/PeerPesa"
     }
   }
 }

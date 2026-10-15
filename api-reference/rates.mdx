@@ -1,0 +1,131 @@
+---
+title: "Check PeerPesa Fiat and Crypto Conversion Rates"
+sidebarTitle: "Check Rates"
+description: "Get indicative onramp and offramp exchange rates between African fiat currencies and crypto assets on Stellar and Celo via the PeerPesa API."
+---
+
+PeerPesa provides indicative conversion rates so you can estimate the value of a ramp before committing. Rates are not locked until you create a quote, and quotes remain valid for 30 minutes. Use this endpoint to preview pricing for your users before generating a locked quote.
+
+<Note>
+  Rates returned by this endpoint are indicative only and may change without notice. To lock a rate for 30 minutes, create a quote via [POST /quotes](/api-reference/quotes).
+</Note>
+
+## Get conversion rate
+
+```http
+GET /rates?type={type}&network={network}&asset={asset}&fiat_currency={fiat_currency}
+```
+
+Retrieve the current conversion rate for an onramp (fiat to crypto) or offramp (crypto to fiat) pair.
+
+### Query parameters
+
+<ParamField query="type" type="string" required>
+  Direction of the ramp. Must be one of: `onramp`, `offramp`.
+</ParamField>
+
+<ParamField query="network" type="string" required>
+  Blockchain network. Must be one of: `stellar`, `celo`.
+</ParamField>
+
+<ParamField query="asset" type="string" required>
+  Crypto asset code. Supported values per network:
+
+  - `stellar`: `XLM`, `USDC`
+  - `celo`: `CELO`, `USDT`, `USDC`, `CUSD`
+</ParamField>
+
+<ParamField query="fiat_currency" type="string" required>
+  Fiat currency code. Supported values: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
+</ParamField>
+
+### Request examples
+
+<CodeGroup>
+
+```bash cURL
+# Onramp rate: KES to USDC on Stellar
+curl -X GET "https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
+  -H "Authorization: Bearer <access_token>"
+
+# Offramp rate: USDT to NGN on Celo
+curl -X GET "https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+```javascript JavaScript
+// Onramp rate: KES to USDC on Stellar
+fetch("https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <access_token>",
+    "Content-Type": "application/json"
+  }
+});
+
+// Offramp rate: USDT to NGN on Celo
+fetch("https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <access_token>",
+    "Content-Type": "application/json"
+  }
+});
+```
+
+</CodeGroup>
+
+### Response example
+
+```json
+{
+  "type": "onramp",
+  "network": "stellar",
+  "asset": "USDC",
+  "fiat_currency": "KES",
+  "rate": "129.45",
+  "inverse_rate": "0.007725",
+  "updated_at": "2024-06-12T09:30:00Z"
+}
+```
+
+### Response fields
+
+<ResponseField name="type" type="string" required>
+  The ramp direction requested. One of: `onramp`, `offramp`.
+</ResponseField>
+
+<ResponseField name="network" type="string" required>
+  The blockchain network identifier. One of: `stellar`, `celo`.
+</ResponseField>
+
+<ResponseField name="asset" type="string" required>
+  The crypto asset code (e.g. `USDC`, `USDT`, `CUSD`).
+</ResponseField>
+
+<ResponseField name="fiat_currency" type="string" required>
+  The fiat currency code (e.g. `KES`, `NGN`).
+</ResponseField>
+
+<ResponseField name="rate" type="string" required>
+  The conversion rate as a decimal string. For an onramp, this is the amount of fiat per one unit of crypto. For an offramp, it is the amount of fiat received per one unit of crypto. The exact semantics depend on the type and asset pair.
+</ResponseField>
+
+<ResponseField name="inverse_rate" type="string" required>
+  The inverse of the quoted rate as a decimal string.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string" required>
+  ISO 8601 UTC timestamp indicating when this rate was last refreshed.
+</ResponseField>
+
+### Error responses
+
+Possible error codes for this endpoint include:
+
+| HTTP status | Error code | Meaning |
+| --- | --- | --- |
+| 400 | `invalid_request` | A required query parameter is missing or malformed. |
+| 401 | `unauthorized` | Access token is missing or expired. |
+| 422 | `unsupported_pair` | The requested asset, fiat currency, network, or type combination is not supported. |
+| 429 | `rate_limited` | Too many requests. Retry after the rate limit window resets. |

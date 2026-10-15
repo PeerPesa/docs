@@ -1,0 +1,340 @@
+---
+title: "Create and confirm quotes with locked rates and fees"
+sidebarTitle: "Quotes"
+description: "Create a quote to lock an exchange rate and fee breakdown for 30 minutes, then confirm it to start the onramp or offramp. Includes create, confirm, and get."
+---
+
+Every PeerPesa ramp runs in two calls: **create a quote** to lock the exchange rate and fee breakdown, then **confirm the quote** to start the onramp or offramp. A quote stays valid for exactly 30 minutes, so show the user the rate, fees, and final amount, and confirm only after they accept.
+
+<Steps>
+  <Step title="Create a quote">
+    `POST /quotes` returns the locked rate, fee breakdown, amounts, and `expires_at` (30 minutes after creation).
+  </Step>
+  <Step title="Show the quote to your user">
+    Display `rate`, `fee.total`, and `destination_amount`, plus a countdown to `expires_at`.
+  </Step>
+  <Step title="Confirm the quote">
+    `POST /quotes/{id}/confirm` with the wallet address (onramp) or beneficiary (offramp). PeerPesa creates the transaction and returns it.
+  </Step>
+</Steps>
+
+<Warning>
+  Quotes expire after 30 minutes. Confirming an expired quote returns `422 quote_expired`, and confirming a quote twice returns `409 quote_already_used`. Create a new quote in either case.
+</Warning>
+
+## Create a quote
+
+**POST** `/quotes`
+
+Locks a rate and fee breakdown for a specific network, asset, fiat currency, amount, and method.
+
+### Request body
+
+<ParamField body="type" type="string" required>
+  Ramp type: `onramp` (fiat to crypto) or `offramp` (crypto to fiat).
+</ParamField>
+
+<ParamField body="network" type="string" required>
+  Blockchain network: `stellar` or `celo`.
+</ParamField>
+
+<ParamField body="asset" type="string" required>
+  Asset code on the network. Stellar: `XLM`, `USDC`. Celo: `CELO`, `USDT`, `USDC`, `CUSD`.
+</ParamField>
+
+<ParamField body="fiat_currency" type="string" required>
+  Fiat currency code: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount as a decimal string, for example `"100.00"`.
+</ParamField>
+
+<ParamField body="amount_currency" type="string" required>
+  Currency the `amount` refers to: the `asset` code or the `fiat_currency` code.
+</ParamField>
+
+<ParamField body="method" type="string" required>
+  Payin or payout method: `mobile_money` or `bank_transfer`. Availability varies by country.
+</ParamField>
+
+### Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/quotes \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "onramp",
+    "network": "stellar",
+    "asset": "USDC",
+    "fiat_currency": "KES",
+    "amount": "10000.00",
+    "amount_currency": "KES",
+    "method": "mobile_money"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/quotes", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    type: "onramp",
+    network: "stellar",
+    asset: "USDC",
+    fiat_currency: "KES",
+    amount: "10000.00",
+    amount_currency: "KES",
+    method: "mobile_money",
+  }),
+});
+const quote = await res.json();
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": "qt_8f2k3m9n1p0q",
+  "type": "onramp",
+  "network": "stellar",
+  "asset": "USDC",
+  "fiat_currency": "KES",
+  "method": "mobile_money",
+  "rate": "129.45",
+  "source_amount": "10000.00",
+  "source_currency": "KES",
+  "fee": {
+    "total": "1.50",
+    "currency": "USDC",
+    "processing_fee": "1.00",
+    "network_fee": "0.50"
+  },
+  "destination_amount": "75.75",
+  "destination_currency": "USDC",
+  "status": "active",
+  "created_at": "2026-10-15T10:00:00Z",
+  "expires_at": "2026-10-15T10:30:00Z"
+}
+```
+
+### Response fields
+
+<ResponseField name="id" type="string">
+  Unique quote identifier, for example `qt_8f2k...`. Use it to confirm the quote.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  `onramp` or `offramp`.
+</ResponseField>
+
+<ResponseField name="rate" type="string">
+  Locked exchange rate as a decimal string.
+</ResponseField>
+
+<ResponseField name="source_amount" type="string">
+  Amount on the source side before fees, in `source_currency`.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee charged for processing this quote.
+
+  <Expandable title="properties">
+    <ResponseField name="total" type="string">
+      Total fee deducted.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Currency the fee is charged in.
+    </ResponseField>
+
+    <ResponseField name="processing_fee" type="string">
+      PeerPesa processing fee.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Blockchain network fee.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="destination_amount" type="string">
+  Final amount the recipient receives after fees, in `destination_currency`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `active`, `confirmed`, or `expired`.
+</ResponseField>
+
+<ResponseField name="expires_at" type="string">
+  ISO 8601 UTC timestamp when the quote expires, 30 minutes after `created_at`.
+</ResponseField>
+
+## Confirm a quote
+
+**POST** `/quotes/{id}/confirm`
+
+Accepts an active quote and creates the ramp transaction at the locked rate and fee. The body depends on the quote `type`.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  ID of an active quote, for example `qt_8f2k3m9n1p0q`.
+</ParamField>
+
+### Request body
+
+<Tabs>
+  <Tab title="Onramp">
+    <ParamField body="wallet_address" type="string" required>
+      Address on the quote's network that receives the crypto.
+    </ParamField>
+
+    <ParamField body="memo" type="string">
+      Stellar memo to attach to the payout, if the receiving wallet needs one.
+    </ParamField>
+
+    <ParamField body="payer" type="object" required>
+      Who pays the fiat. For `mobile_money`, include `phone_number`. For `bank_transfer`, include `account_name`.
+    </ParamField>
+
+    <ParamField body="reference" type="string">
+      Your own identifier, returned on the transaction.
+    </ParamField>
+  </Tab>
+  <Tab title="Offramp">
+    <ParamField body="beneficiary_id" type="string" required>
+      [Beneficiary](/api-reference/beneficiaries) who receives the fiat. Its currency and method must match the quote.
+    </ParamField>
+
+    <ParamField body="refund_address" type="string" required>
+      Address on the quote's network where funds are returned if the payout fails.
+    </ParamField>
+
+    <ParamField body="reference" type="string">
+      Your own identifier, returned on the transaction.
+    </ParamField>
+  </Tab>
+</Tabs>
+
+### Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 6c1f0a2e-order-12345" \
+  -d '{
+    "wallet_address": "GABC...XYZ",
+    "payer": { "phone_number": "+254712345678" },
+    "reference": "order-12345"
+  }'
+```
+
+```javascript JavaScript
+const res = await fetch(
+  `https://api.peerpesa.co/v1/quotes/${quote.id}/confirm`,
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": "6c1f0a2e-order-12345",
+    },
+    body: JSON.stringify({
+      wallet_address: "GABC...XYZ",
+      payer: { phone_number: "+254712345678" },
+      reference: "order-12345",
+    }),
+  }
+);
+const transaction = await res.json();
+```
+
+</CodeGroup>
+
+### Response
+
+Returns the transaction created from the quote. Onramps start in `awaiting_payment` with `payment_instructions`. Offramps start in `awaiting_deposit` with a `deposit` object. See [Onramp](/api-reference/onramp) and [Offramp](/api-reference/offramp) for the full transaction fields.
+
+```json
+{
+  "id": "txn_9a3b4c5d6e7f",
+  "type": "onramp",
+  "status": "awaiting_payment",
+  "quote_id": "qt_8f2k3m9n1p0q",
+  "network": "stellar",
+  "asset": "USDC",
+  "fiat_currency": "KES",
+  "rate": "129.45",
+  "source_amount": "10000.00",
+  "destination_amount": "75.75",
+  "fee": {
+    "total": "1.50",
+    "currency": "USDC",
+    "processing_fee": "1.00",
+    "network_fee": "0.50"
+  },
+  "wallet_address": "GABC...XYZ",
+  "reference": "order-12345",
+  "payment_instructions": {
+    "method": "mobile_money",
+    "phone_number": "+254712345678",
+    "prompt_text": "You will receive an M-Pesa prompt to complete payment."
+  },
+  "created_at": "2026-10-15T10:05:00Z",
+  "updated_at": "2026-10-15T10:05:00Z"
+}
+```
+
+## Retrieve a quote
+
+**GET** `/quotes/{id}`
+
+Returns a quote with its current `status` and `expires_at`. The response has the same shape as the create response.
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q", {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const quote = await res.json();
+```
+
+</CodeGroup>
+
+## Quote statuses
+
+| Status | Meaning |
+| --- | --- |
+| `active` | Valid and can be confirmed. |
+| `confirmed` | Confirmed; a transaction was created from it. |
+| `expired` | Older than 30 minutes and can no longer be confirmed. |
+
+## Errors
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `quote_expired` | 422 | The quote is older than 30 minutes. |
+| `quote_already_used` | 409 | The quote was already confirmed. |
+| `quote_not_found` | 404 | No quote with this ID exists for your account. |
+| `beneficiary_mismatch` | 422 | The beneficiary currency or method does not match the quote. |
+| `invalid_wallet_address` | 422 | The address is not valid for the quote's network. |
+
+See [Error Codes](/errors) for the full list.

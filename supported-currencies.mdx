@@ -1,0 +1,78 @@
+---
+title: "Supported fiat currencies, networks, and crypto assets"
+sidebarTitle: "Supported Currencies"
+description: "See the fiat currencies, payment methods, blockchain networks, and crypto assets PeerPesa supports for onramps and offramps on Stellar and Celo."
+---
+
+PeerPesa converts between five African fiat currencies and stablecoins or native tokens on the Stellar and Celo networks. Use this page to check which combinations you can quote, and call [GET /currencies](/api-reference/coins) to read the live list from the API.
+
+## Fiat currencies
+
+| Code | Currency | Country |
+| --- | --- | --- |
+| `KES` | Kenyan Shilling | Kenya |
+| `TZS` | Tanzanian Shilling | Tanzania |
+| `NGN` | Nigerian Naira | Nigeria |
+| `ZAR` | South African Rand | South Africa |
+| `ZMW` | Zambian Kwacha | Zambia |
+
+Fiat is collected (onramp) or paid out (offramp) through `mobile_money` or `bank_transfer`. Available methods vary by country, so check the `methods` array returned for each currency.
+
+## Networks and assets
+
+<Tabs>
+  <Tab title="Stellar">
+    Network identifier: `stellar`
+
+    | Asset | Description |
+    | --- | --- |
+    | `XLM` | Stellar Lumens, the native Stellar asset |
+    | `USDC` | USD Coin issued on Stellar |
+
+    <Warning>
+      Offramp deposits on Stellar require the `memo` returned when you confirm an offramp quote. Deposits without the correct memo cannot be matched to your transaction.
+    </Warning>
+  </Tab>
+  <Tab title="Celo">
+    Network identifier: `celo`
+
+    | Asset | Description |
+    | --- | --- |
+    | `CELO` | The native Celo token |
+    | `USDT` | Tether USD on Celo |
+    | `USDC` | USD Coin on Celo |
+    | `CUSD` | Celo Dollar (cUSD) |
+  </Tab>
+  <Tab title="Bitcoin">
+    Network identifier: `bitcoin`
+
+    | Asset | Description |
+    | --- | --- |
+    | `BTC` | Bitcoin, received on-chain or over the Lightning Network |
+
+    Bitcoin is available for [deposit wallets](/api-reference/deposit-wallets), including Lightning addresses and invoices.
+  </Tab>
+</Tabs>
+
+<Note>
+  `USDC` is available on both networks. Always pass `network` together with `asset` so PeerPesa knows which chain to use.
+</Note>
+
+## List currencies with the API
+
+Call [GET /currencies](/api-reference/coins) to read the live list of coins, the networks each one runs on, network status, fees, withdrawal limits, and prices.
+
+```bash cURL
+curl https://api.peerpesa.co/v1/currencies \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+<CardGroup cols={2}>
+  <Card title="Check rates" icon="chart-line" href="/api-reference/rates">
+    Get indicative rates for any supported pair.
+  </Card>
+
+  <Card title="Generate a quote" icon="file-invoice-dollar" href="/api-reference/quotes">
+    Lock a rate and fee for 30 minutes.
+  </Card>
+</CardGroup>

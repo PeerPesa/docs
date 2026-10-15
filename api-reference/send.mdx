@@ -1,0 +1,673 @@
+---
+title: "Send Crypto from PeerPesa Balance"
+sidebarTitle: "Send"
+description: "Learn to send crypto on-chain or internally with the PeerPesa Wallet API. Covers address sends, internal transfers, Lightning, estimates, and error handling."
+---
+
+Use the PeerPesa Send API to move crypto from your wallet balance to an external blockchain address or to another PeerPesa user. On-chain sends are irreversible and carry network fees from `GET /currencies`. Internal transfers to other PeerPesa users are always free and settle instantly. Use `POST /wallet/send` to execute a send, or `POST /wallet/send/estimate` to preview fees and net amounts before committing.
+
+<Tabs>
+  <Tab title="On-chain to address">
+    Sending to an external address requires a valid `address` and, for some networks, a `memo`. For Bitcoin, you can also send over Lightning using an invoice or a Lightning address.
+  </Tab>
+  <Tab title="Internal to PeerPesa user">
+    Internal transfers do not touch the blockchain, so they are instant and have no network fee. You target the recipient by `email`, `phone_number`, or `user_id`.
+  </Tab>
+</Tabs>
+
+All send examples use the Sandbox base URL:
+
+```text
+https://sandbox-api.peerpesa.co/v1
+```
+
+Send production requests to:
+
+```text
+https://api.peerpesa.co/v1
+```
+
+---
+
+## Estimate a Send
+
+Before executing a send, you can preview the network fee and net amount the recipient will receive. This is useful for on-chain sends where fees vary by network.
+
+### Endpoint
+
+`POST /wallet/send/estimate`
+
+#### Request
+
+##### Headers
+
+| Header | Required | Description |
+| --- | --- | --- |
+| `Authorization` | Yes | `Bearer <token>` from your dashboard. |
+| `Content-Type` | Yes | `application/json` |
+| `Idempotency-Key` | Optional | UUID to safely retry the same request without double spending. |
+
+##### Body Parameters
+
+<ParamField body="symbol" type="string" required>
+  Asset symbol. For example: `USDC`, `XLM`, `BTC`, `CELO`, `USDT`.
+</ParamField>
+
+<ParamField body="network" type="string" required>
+  Network code from <a href="/api-reference/coins">GET /currencies</a>. For example: `STELLAR`, `CELO`, `BITCOIN`.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount to send as a decimal string; must respect `min_withdraw` and `max_withdraw` from <a href="/api-reference/coins">GET /currencies</a>.
+</ParamField>
+
+<ParamField body="destination" type="object" required>
+  <Expandable title="destination fields">
+    <ParamField body="type" type="string" required>
+      Either `address` or `peerpesa_user`.
+    </ParamField>
+
+    <ParamField body="address" type="string">
+      Required when `type` is `address`. The on-chain wallet address.
+    </ParamField>
+
+    <ParamField body="memo" type="string">
+      Required for Stellar when sending to exchanges or custodial wallets; optional otherwise.
+    </ParamField>
+
+    <ParamField body="email" type="string">
+      Required when `type` is `peerpesa_user`. Can be used instead of `phone_number` or `user_id`.
+    </ParamField>
+
+    <ParamField body="phone_number" type="string">
+      Required when `type` is `peerpesa_user`. Can be used instead of `email` or `user_id`.
+    </ParamField>
+
+    <ParamField body="user_id" type="string">
+      Required when `type` is `peerpesa_user`. Can be used instead of `email` or `phone_number`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+#### Response
+
+<ResponseField name="symbol" type="string">
+  Asset symbol.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Network code.
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Amount you are sending.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown.
+
+  <Expandable title="fee fields">
+    <ResponseField name="total" type="string">
+      Total fee deducted from your balance.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Currency or symbol the fee is expressed in.
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      PeerPesa application fee.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Blockchain network fee.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  Amount the recipient receives after fees.
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://sandbox-api.peerpesa.co/v1/wallet/send/estimate \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "USDC",
+    "network": "CELO",
+    "amount": "50.00",
+    "destination": {
+      "type": "address",
+      "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f8dEe"
+    }
+  }'
+```
+
+```javascript JavaScript
+const sendEstimate = async () => {
+  const res = await fetch('https://sandbox-api.peerpesa.co/v1/wallet/send/estimate', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      symbol: 'USDC',
+      network: 'CELO',
+      amount: '50.00',
+      destination: {
+        type: 'address',
+        address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8dEe',
+      },
+    }),
+  });
+
+  const data = await res.json();
+  console.log(data);
+};
+
+sendEstimate();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "symbol": "USDC",
+  "network": "CELO",
+  "amount": "50.00",
+  "fee": {
+    "total": "0.50",
+    "currency": "USDC",
+    "app_fee": "0.30",
+    "network_fee": "0.20"
+  },
+  "net_amount": "49.50"
+}
+```
+
+---
+
+## Execute a Send
+
+Initiate a send from your wallet balance. The response is a wallet transaction object with `status: pending` or `processing`.
+
+### Endpoint
+
+`POST /wallet/send`
+
+#### Request
+
+##### Headers
+
+| Header | Required | Description |
+| --- | --- | --- |
+| `Authorization` | Yes | `Bearer <token>` from your dashboard. |
+| `Content-Type` | Yes | `application/json` |
+| `Idempotency-Key` | Optional | UUID to safely retry without double spending. |
+
+##### Body Parameters
+
+<ParamField body="symbol" type="string" required>
+  Asset symbol. For example: `USDC`, `XLM`, `BTC`.
+</ParamField>
+
+<ParamField body="network" type="string" required>
+  Network code from <a href="/api-reference/coins">GET /currencies</a>.
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  Amount to send as a decimal string.
+</ParamField>
+
+<ParamField body="destination" type="object" required>
+  <Expandable title="destination fields">
+    <ParamField body="type" type="string" required>
+      `address` for on-chain sends; `peerpesa_user` for internal transfers.
+    </ParamField>
+
+    <ParamField body="address" type="string">
+      Required when `type` is `address`.
+    </ParamField>
+
+    <ParamField body="memo" type="string">
+      Required for Stellar when the destination is an exchange or custodial wallet; optional otherwise.
+    </ParamField>
+
+    <ParamField body="email" type="string">
+      Exactly one of `email`, `phone_number`, or `user_id` when `type` is `peerpesa_user`.
+    </ParamField>
+
+    <ParamField body="phone_number" type="string">
+      Exactly one of `email`, `phone_number`, or `user_id` when `type` is `peerpesa_user`.
+    </ParamField>
+
+    <ParamField body="user_id" type="string">
+      Exactly one of `email`, `phone_number`, or `user_id` when `type` is `peerpesa_user`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="reference" type="string" optional>
+  Your own reference or ID for the transaction.
+</ParamField>
+
+<ParamField body="description" type="string" optional>
+  Optional memo or note for your records.
+</ParamField>
+
+#### Response
+
+A wallet transaction object.
+
+<ResponseField name="id" type="string">
+  Unique transaction ID prefixed with `txn_`.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Always `send`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  One of `pending`, `processing`, `completed`, `failed`, `refunded`.
+</ResponseField>
+
+<ResponseField name="symbol" type="string">
+  Asset symbol.
+</ResponseField>
+
+<ResponseField name="network" type="string">
+  Network code.
+</ResponseField>
+
+<ResponseField name="amount" type="string">
+  Amount sent.
+</ResponseField>
+
+<ResponseField name="fee" type="object">
+  Fee breakdown.
+
+  <Expandable title="fee fields">
+    <ResponseField name="total" type="string">
+      Total fee.
+    </ResponseField>
+
+    <ResponseField name="currency" type="string">
+      Fee currency.
+    </ResponseField>
+
+    <ResponseField name="app_fee" type="string">
+      Application fee.
+    </ResponseField>
+
+    <ResponseField name="network_fee" type="string">
+      Blockchain network fee.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="net_amount" type="string">
+  Amount received after fees.
+</ResponseField>
+
+<ResponseField name="reference" type="string|null">
+  Your optional reference.
+</ResponseField>
+
+<ResponseField name="tx_hash" type="string|null">
+  On-chain transaction hash; `null` for internal transfers.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  ISO 8601 last update timestamp.
+</ResponseField>
+
+---
+
+## Send to an On-chain Address
+
+Follow these steps to send cryptocurrency to an external wallet address.
+
+<Steps>
+  <Step title="Check supported coins and withdrawal limits">
+    Call <a href="/api-reference/coins">GET /currencies</a> to fetch the latest `send_fees`, `min_withdraw`, and `max_withdraw` for your chosen symbol and network. Only networks with `status: active` can be used.
+  </Step>
+  <Step title="Estimate the fee">
+    Call `POST /wallet/send/estimate` with the same parameters you plan to use for the send so you know the exact fee and net amount before committing.
+  </Step>
+  <Step title="Execute the send">
+    Call `POST /wallet/send` with the destination `type` set to `address`, the recipient `address`, and a `memo` if required. Save the returned `id` and poll <a href="/api-reference/transactions">GET /transactions/{id}</a> or listen to webhooks to track status.
+  </Step>
+</Steps>
+
+<Tabs>
+  <Tab title="Stellar USDC with memo">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://sandbox-api.peerpesa.co/v1/wallet/send \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -H "Idempotency-Key: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+      -d '{
+        "symbol": "USDC",
+        "network": "STELLAR",
+        "amount": "100.00",
+        "destination": {
+          "type": "address",
+          "address": "GB3KJPLFUYN5LGTGOD3OZ...",
+          "memo": "123456"
+        },
+        "reference": "ref-send-001",
+        "description": "Stellar USDC to exchange"
+      }'
+    ```
+
+    ```javascript JavaScript
+    const sendStellar = async () => {
+      const res = await fetch('https://sandbox-api.peerpesa.co/v1/wallet/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer YOUR_TOKEN',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        },
+        body: JSON.stringify({
+          symbol: 'USDC',
+          network: 'STELLAR',
+          amount: '100.00',
+          destination: {
+            type: 'address',
+            address: 'GB3KJPLFUYN5LGTGOD3OZ...',
+            memo: '123456',
+          },
+          reference: 'ref-send-001',
+          description: 'Stellar USDC to exchange',
+        }),
+      });
+    
+      const data = await res.json();
+      console.log(data);
+    };
+    
+    sendStellar();
+    ```
+
+    </CodeGroup>
+  </Tab>
+  <Tab title="CELO USDC">
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://sandbox-api.peerpesa.co/v1/wallet/send \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "symbol": "USDC",
+        "network": "CELO",
+        "amount": "50.00",
+        "destination": {
+          "type": "address",
+          "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f8dEe"
+        },
+        "reference": "ref-send-002"
+      }'
+    ```
+
+    ```javascript JavaScript
+    const sendCelo = async () => {
+      const res = await fetch('https://sandbox-api.peerpesa.co/v1/wallet/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer YOUR_TOKEN',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          symbol: 'USDC',
+          network: 'CELO',
+          amount: '50.00',
+          destination: {
+            type: 'address',
+            address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8dEe',
+          },
+          reference: 'ref-send-002',
+        }),
+      });
+    
+      const data = await res.json();
+      console.log(data);
+    };
+    
+    sendCelo();
+    ```
+
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+<Warning>
+  When sending to a Stellar exchange or custodial wallet, the `memo` field is required. Omitting it can result in lost funds because these services use a single shared address to credit accounts by memo.
+</Warning>
+
+---
+
+## Send via Lightning
+
+For Bitcoin (`symbol: BTC`, `network: BITCOIN`), you can send over the Lightning Network by passing a Lightning destination.
+
+### Body Parameters
+
+<ParamField body="destination" type="object" required>
+  <Expandable title="Lightning destination fields">
+    <ParamField body="type" type="string" required>
+      For Lightning, use `lightning`.
+    </ParamField>
+
+    <ParamField body="invoice" type="string">
+      A BOLT11 payment request (invoice) string. Required if `lightning_address` is not provided.
+    </ParamField>
+
+    <ParamField body="lightning_address" type="string">
+      A Lightning address (for example, `alice@walletofsatoshi.com`). Required if `invoice` is not provided.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://sandbox-api.peerpesa.co/v1/wallet/send \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "BTC",
+    "network": "BITCOIN",
+    "amount": "0.001",
+    "destination": {
+      "type": "lightning",
+      "invoice": "lnbc1m1p3..."
+    },
+    "reference": "ref-lightning-001"
+  }'
+```
+
+```javascript JavaScript
+const sendLightning = async () => {
+  const res = await fetch('https://sandbox-api.peerpesa.co/v1/wallet/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      symbol: 'BTC',
+      network: 'BITCOIN',
+      amount: '0.001',
+      destination: {
+        type: 'lightning',
+        invoice: 'lnbc1m1p3...',
+      },
+      reference: 'ref-lightning-001',
+    }),
+  });
+
+  const data = await res.json();
+  console.log(data);
+};
+
+sendLightning();
+```
+
+</CodeGroup>
+
+<Note>
+  If you provide both `invoice` and `lightning_address`, the API prefers the invoice.
+</Note>
+
+---
+
+## Send to a PeerPesa User
+
+Transfer crypto instantly and fee-free to another PeerPesa account.
+
+### Body Parameters
+
+<ParamField body="destination" type="object" required>
+  <Expandable title="PeerPesa user destination fields">
+    <ParamField body="type" type="string" required>
+      Must be `peerpesa_user`.
+    </ParamField>
+
+    <ParamField body="email" type="string">
+      Recipient email address. Exactly one of `email`, `phone_number`, or `user_id` is required.
+    </ParamField>
+
+    <ParamField body="phone_number" type="string">
+      Recipient phone number in E.164 format. Exactly one of `email`, `phone_number`, or `user_id` is required.
+    </ParamField>
+
+    <ParamField body="user_id" type="string">
+      PeerPesa user UUID. Exactly one of `email`, `phone_number`, or `user_id` is required.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://sandbox-api.peerpesa.co/v1/wallet/send \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "USDC",
+    "network": "CELO",
+    "amount": "200.00",
+    "destination": {
+      "type": "peerpesa_user",
+      "email": "alice@example.com"
+    },
+    "reference": "ref-internal-001",
+    "description": "Payment for invoice 1234"
+  }'
+```
+
+```javascript JavaScript
+const sendInternal = async () => {
+  const res = await fetch('https://sandbox-api.peerpesa.co/v1/wallet/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      symbol: 'USDC',
+      network: 'CELO',
+      amount: '200.00',
+      destination: {
+        type: 'peerpesa_user',
+        email: 'alice@example.com',
+      },
+      reference: 'ref-internal-001',
+      description: 'Payment for invoice 1234',
+    }),
+  });
+
+  const data = await res.json();
+  console.log(data);
+};
+
+sendInternal();
+```
+
+</CodeGroup>
+
+---
+
+## Track a Send
+
+After creating a send, track its status by polling or listening to webhooks.
+
+<Steps>
+  <Step title="Poll the transaction">
+    Use <a href="/api-reference/transactions">GET /transactions/{id}</a> with the `id` from the send response.
+  </Step>
+  <Step title="Listen to webhooks">
+    Configure your webhook endpoint to receive <a href="/webhooks">transaction events</a>:
+
+    - `transaction.processing`: the send is being broadcast to the network
+    - `transaction.completed`: confirmations received; the send is final
+    - `transaction.failed`: the send could not complete; funds remain in your balance
+  </Step>
+</Steps>
+
+---
+
+## Error Codes
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `insufficient_balance` | 422 | The wallet balance for this symbol and network is too low to cover the amount plus fee. |
+| `amount_too_low` | 422 | The amount is below the network `min_withdraw` from <a href="/api-reference/coins">GET /currencies</a>. |
+| `amount_too_high` | 422 | The amount exceeds the network `max_withdraw` from <a href="/api-reference/coins">GET /currencies</a>. |
+| `unsupported_network` | 422 | The `network` is inactive or not supported. Check <a href="/api-reference/coins">GET /currencies</a>. |
+| `unsupported_asset` | 422 | The `symbol` is not supported on the requested network. |
+| `invalid_wallet_address` | 422 | The provided `address` is not valid for the network. |
+| `network_unavailable` | 503 | The network is temporarily unavailable. Retry with exponential backoff. |
+| `recipient_not_found` | 404 | The specified `email`, `phone_number`, or `user_id` does not match a PeerPesa user. |
+| `beneficiary_mismatch` | 422 | The transfer details do not match the beneficiary record. |
+
+All errors are returned in this shape:
+
+```json
+{
+  "error": {
+    "code": "invalid_wallet_address",
+    "message": "The provided address is not valid for the selected network.",
+    "param": "destination.address",
+    "request_id": "req_abc123"
+  }
+}
+```
+
+---
+
+## On-chain Irreversibility Warning
+
+<Warning>
+  On-chain blockchain transactions are irreversible. Always verify the destination address and, for Stellar, include a memo when required. PeerPesa cannot recover funds sent to the wrong address.
+</Warning>
