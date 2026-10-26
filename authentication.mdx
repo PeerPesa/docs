@@ -74,7 +74,7 @@ Exchange your key pair for an access token with `POST /auth/token`.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/auth/token \
+curl -X POST https://api.peerpesa.co/v2/auth/token \
   -H "Content-Type: application/json" \
   -d '{
     "public_key": "'"$PEERPESA_PUBLIC_KEY"'",
@@ -83,7 +83,7 @@ curl -X POST https://api.peerpesa.co/v1/auth/token \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/auth/token", {
+const res = await fetch("https://api.peerpesa.co/v2/auth/token", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -123,13 +123,13 @@ Send the access token in the `Authorization` header on every request except `POS
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
+curl "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES",
+  "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES",
   { headers: { Authorization: `Bearer ${accessToken}` } }
 );
 ```
@@ -145,7 +145,7 @@ let cached = { token: null, expiresAt: 0 };
 
 async function getAccessToken() {
   if (cached.token && Date.now() < cached.expiresAt - 60_000) return cached.token;
-  const res = await fetch("https://api.peerpesa.co/v1/auth/token", {
+  const res = await fetch("https://api.peerpesa.co/v2/auth/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -180,7 +180,7 @@ async function getAccessToken() {
 
 | Environment | Base URL | Key prefixes |
 | --- | --- | --- |
-| Sandbox | `https://sandbox-api.peerpesa.co/v1` | `pk_test_`, `sk_test_` |
-| Production | `https://api.peerpesa.co/v1` | `pk_live_`, `sk_live_` |
+| Sandbox | `https://sandbox-api.peerpesa.co/v2` | `pk_test_`, `sk_test_` |
+| Production | `https://api.peerpesa.co/v2` | `pk_live_`, `sk_live_` |
 
 Sandbox quotes and transactions never move real funds.

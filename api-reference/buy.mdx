@@ -11,12 +11,12 @@ The flow is two steps: first request a locked quote with your desired fiat amoun
 <Tabs>
   <Tab title="Sandbox">
     ```text
-    Base URL: https://sandbox-api.peerpesa.co/v1
+    Base URL: https://sandbox-api.peerpesa.co/v2
     ```
   </Tab>
   <Tab title="Production">
     ```text
-    Base URL: https://api.peerpesa.co/v1
+    Base URL: https://api.peerpesa.co/v2
     ```
   </Tab>
 </Tabs>
@@ -140,7 +140,7 @@ POST /wallet/buy/quote
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/buy/quote \
+curl -X POST https://api.peerpesa.co/v2/wallet/buy/quote \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -154,7 +154,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/buy/quote \
 ```
 
 ```js JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/wallet/buy/quote", {
+const res = await fetch("https://api.peerpesa.co/v2/wallet/buy/quote", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -323,7 +323,7 @@ The response is a wallet transaction object with extra fields for payment instru
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/buy \
+curl -X POST https://api.peerpesa.co/v2/wallet/buy \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -336,7 +336,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/buy \
 ```
 
 ```js JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/wallet/buy", {
+const res = await fetch("https://api.peerpesa.co/v2/wallet/buy", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",

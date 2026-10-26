@@ -30,12 +30,12 @@ Retrieves the profile of the authenticated account.
 <CodeGroup>
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/profile \
+curl https://api.peerpesa.co/v2/profile \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/profile", {
+const res = await fetch("https://api.peerpesa.co/v2/profile", {
   headers: { Authorization: `Bearer ${accessToken}` },
 });
 const profile = await res.json();
@@ -78,14 +78,14 @@ Updates editable profile fields. Only the fields you send are changed.
 <CodeGroup>
 
 ```bash cURL
-curl -X PATCH https://api.peerpesa.co/v1/profile \
+curl -X PATCH https://api.peerpesa.co/v2/profile \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{ "default_currency": "TZS" }'
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/profile", {
+const res = await fetch("https://api.peerpesa.co/v2/profile", {
   method: "PATCH",
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -105,7 +105,7 @@ Returns the updated [profile object](#the-profile-object).
 Returns the account's KYC verification details.
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/profile/kyc \
+curl https://api.peerpesa.co/v2/profile/kyc \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -134,7 +134,7 @@ curl https://api.peerpesa.co/v1/profile/kyc \
 Returns transaction limits for the account. Check these before generating a [quote](/api-reference/quotes) to avoid `amount_too_high` errors.
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/profile/limits \
+curl https://api.peerpesa.co/v2/profile/limits \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 

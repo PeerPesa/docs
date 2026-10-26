@@ -63,7 +63,7 @@ Locks a rate and fee breakdown for a specific network, asset, fiat currency, amo
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/quotes \
+curl -X POST https://api.peerpesa.co/v2/quotes \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -78,7 +78,7 @@ curl -X POST https://api.peerpesa.co/v1/quotes \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/quotes", {
+const res = await fetch("https://api.peerpesa.co/v2/quotes", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -230,7 +230,7 @@ Accepts an active quote and creates the ramp transaction at the locked rate and 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm \
+curl -X POST https://api.peerpesa.co/v2/quotes/qt_8f2k3m9n1p0q/confirm \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: 6c1f0a2e-order-12345" \
@@ -243,7 +243,7 @@ curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm \
 
 ```javascript JavaScript
 const res = await fetch(
-  `https://api.peerpesa.co/v1/quotes/${quote.id}/confirm`,
+  `https://api.peerpesa.co/v2/quotes/${quote.id}/confirm`,
   {
     method: "POST",
     headers: {
@@ -306,12 +306,12 @@ Returns a quote with its current `status` and `expires_at`. The response has the
 <CodeGroup>
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q \
+curl https://api.peerpesa.co/v2/quotes/qt_8f2k3m9n1p0q \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q", {
+const res = await fetch("https://api.peerpesa.co/v2/quotes/qt_8f2k3m9n1p0q", {
   headers: { Authorization: `Bearer ${accessToken}` },
 });
 const quote = await res.json();

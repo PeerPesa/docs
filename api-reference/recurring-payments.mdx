@@ -83,7 +83,7 @@ Creates a recurring payment in `draft` status.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/recurring-payments \
+curl -X POST https://api.peerpesa.co/v2/recurring-payments \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -99,7 +99,7 @@ curl -X POST https://api.peerpesa.co/v1/recurring-payments \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/recurring-payments", {
+const res = await fetch("https://api.peerpesa.co/v2/recurring-payments", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -179,7 +179,7 @@ Sets when and how often the payment runs. You can call it again while the paymen
 <CodeGroup>
 
 ```bash cURL
-curl -X PUT https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/schedule \
+curl -X PUT https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/schedule \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -194,7 +194,7 @@ curl -X PUT https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/schedule \
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/schedule",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/schedule",
   {
     method: "PUT",
     headers: {
@@ -225,7 +225,7 @@ Returns the recurring payment with its `schedule` filled in. Status stays `draft
 Returns a summary to show the user before activation: recipient, upcoming run dates, estimated fees at current rates, and whether the balance covers the next run.
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/review \
+curl https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/review \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -292,13 +292,13 @@ Activates a reviewed draft. Status becomes `active` and `next_run_at` is set.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/activate \
+curl -X POST https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/activate \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/activate",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/activate",
   { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } }
 );
 const recurring = await res.json();
@@ -342,7 +342,7 @@ Stops future runs of an `active` recurring payment without deleting it. A run al
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/pause \
+curl -X POST https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/pause \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{ "reason": "Tenant away in December" }'
@@ -350,7 +350,7 @@ curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/pause \
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/pause",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/pause",
   {
     method: "POST",
     headers: {
@@ -394,7 +394,7 @@ Restarts a `paused` recurring payment. Runs missed while paused are skipped, not
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/restart \
+curl -X POST https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/restart \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{ "start_date": "2027-01-01" }'
@@ -402,7 +402,7 @@ curl -X POST https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/restart \
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/restart",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/restart",
   {
     method: "POST",
     headers: {
@@ -445,13 +445,13 @@ Deletes a recurring payment. No further runs execute and it can no longer be res
 <CodeGroup>
 
 ```bash cURL
-curl -X DELETE https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k \
+curl -X DELETE https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k",
   { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } }
 );
 const result = await res.json();
@@ -513,13 +513,13 @@ Returns every transaction created by one recurring payment, newest first. Failed
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/transactions?page=1&size=10" \
+curl "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/transactions?page=1&size=10" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/recurring-payments/rp_5t8w2k/transactions?page=1&size=10",
+  "https://api.peerpesa.co/v2/recurring-payments/rp_5t8w2k/transactions?page=1&size=10",
   { headers: { Authorization: `Bearer ${accessToken}` } }
 );
 const { data, pagination, summary } = await res.json();

@@ -88,7 +88,7 @@ Every PeerPesa list endpoint, including orders and transaction histories, shares
 <CodeGroup>
 
 ```bash Search and date range
-curl -G "https://api.peerpesa.co/v1/orders" \
+curl -G "https://api.peerpesa.co/v2/orders" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "search=0x15cb5Ab9" \
   --data-urlencode "start_date=2026-07-01" \
@@ -99,7 +99,7 @@ curl -G "https://api.peerpesa.co/v1/orders" \
 ```
 
 ```bash Sort by amount
-curl "https://api.peerpesa.co/v1/orders?sort_by=amount&sort_order=desc&size=10" \
+curl "https://api.peerpesa.co/v2/orders?sort_by=amount&sort_order=desc&size=10" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -111,7 +111,7 @@ async function fetchAll(path, params, accessToken) {
 
   do {
     const query = new URLSearchParams({ ...params, page, size: 100 });
-    const res = await fetch(`https://api.peerpesa.co/v1${path}?${query}`, {
+    const res = await fetch(`https://api.peerpesa.co/v2${path}?${query}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const { data, pagination } = await res.json();

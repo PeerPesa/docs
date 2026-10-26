@@ -55,7 +55,7 @@ Confirms an active `offramp` quote and creates the offramp transaction.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k1x9a/confirm \
+curl -X POST https://api.peerpesa.co/v2/quotes/qt_8f2k1x9a/confirm \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -66,7 +66,7 @@ curl -X POST https://api.peerpesa.co/v1/quotes/qt_8f2k1x9a/confirm \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k1x9a/confirm", {
+const res = await fetch("https://api.peerpesa.co/v2/quotes/qt_8f2k1x9a/confirm", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${accessToken}`,

@@ -30,17 +30,17 @@ Retrieve the status and latest statistics for all supported networks, or filter 
 
 ```bash cURL
 # All networks
-curl -X GET "https://api.peerpesa.co/v1/network/stats" \
+curl -X GET "https://api.peerpesa.co/v2/network/stats" \
   -H "Authorization: Bearer <access_token>"
 
 # Single network
-curl -X GET "https://api.peerpesa.co/v1/network/stats?network=stellar" \
+curl -X GET "https://api.peerpesa.co/v2/network/stats?network=stellar" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
 // All networks
-fetch("https://api.peerpesa.co/v1/network/stats", {
+fetch("https://api.peerpesa.co/v2/network/stats", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",
@@ -49,7 +49,7 @@ fetch("https://api.peerpesa.co/v1/network/stats", {
 });
 
 // Single network
-fetch("https://api.peerpesa.co/v1/network/stats?network=stellar", {
+fetch("https://api.peerpesa.co/v2/network/stats?network=stellar", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",

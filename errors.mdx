@@ -136,7 +136,7 @@ Every failed PeerPesa API request returns an HTTP status code and a JSON body wi
 - Send an `Idempotency-Key` header on `POST` requests so a retried request never creates a duplicate transaction.
 
 ```javascript Error handling example
-const res = await fetch("https://api.peerpesa.co/v1/quotes/qt_8f2k3m9n1p0q/confirm", options);
+const res = await fetch("https://api.peerpesa.co/v2/quotes/qt_8f2k3m9n1p0q/confirm", options);
 if (!res.ok) {
   const { error } = await res.json();
   switch (error.code) {

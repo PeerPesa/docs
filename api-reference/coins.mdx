@@ -21,12 +21,12 @@ Returns all supported coins.
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v1/currencies?symbol=USDC" \
+curl "https://api.peerpesa.co/v2/currencies?symbol=USDC" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/currencies?symbol=USDC", {
+const res = await fetch("https://api.peerpesa.co/v2/currencies?symbol=USDC", {
   headers: { Authorization: `Bearer ${accessToken}` },
 });
 const coins = await res.json();

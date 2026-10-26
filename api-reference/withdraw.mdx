@@ -96,7 +96,7 @@ Before you withdraw, make sure you have:
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/withdraw/quote \
+curl -X POST https://api.peerpesa.co/v2/wallet/withdraw/quote \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: withdraw-quote-001" \
@@ -111,7 +111,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/withdraw/quote \
 ```
 
 ```js JavaScript
-const response = await fetch("https://api.peerpesa.co/v1/wallet/withdraw/quote", {
+const response = await fetch("https://api.peerpesa.co/v2/wallet/withdraw/quote", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -243,7 +243,7 @@ console.log(quote);
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/withdraw \
+curl -X POST https://api.peerpesa.co/v2/wallet/withdraw \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: withdraw-exec-001" \
@@ -254,7 +254,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/withdraw \
 ```
 
 ```js JavaScript
-const response = await fetch("https://api.peerpesa.co/v1/wallet/withdraw", {
+const response = await fetch("https://api.peerpesa.co/v2/wallet/withdraw", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -427,10 +427,10 @@ Use the following base URLs depending on the stage of your integration:
 
 <Tabs>
   <Tab title="Production">
-    `https://api.peerpesa.co/v1`
+    `https://api.peerpesa.co/v2`
   </Tab>
   <Tab title="Sandbox">
-    `https://sandbox-api.peerpesa.co/v1`
+    `https://sandbox-api.peerpesa.co/v2`
   </Tab>
 </Tabs>
 

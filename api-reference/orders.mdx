@@ -85,7 +85,7 @@ Returns your orders, newest first. Supports all [pagination and filter parameter
 <CodeGroup>
 
 ```bash cURL
-curl -G "https://api.peerpesa.co/v1/orders" \
+curl -G "https://api.peerpesa.co/v2/orders" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "order_type=swap" \
   --data-urlencode "status=successful" \
@@ -106,7 +106,7 @@ const query = new URLSearchParams({
   page: 1,
   size: 20,
 });
-const res = await fetch(`https://api.peerpesa.co/v1/orders?${query}`, {
+const res = await fetch(`https://api.peerpesa.co/v2/orders?${query}`, {
   headers: { Authorization: `Bearer ${accessToken}` },
 });
 const { data: orders, pagination } = await res.json();

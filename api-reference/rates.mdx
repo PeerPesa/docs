@@ -45,17 +45,17 @@ Retrieve the current conversion rate for an onramp (fiat to crypto) or offramp (
 
 ```bash cURL
 # Onramp rate: KES to USDC on Stellar
-curl -X GET "https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
+curl -X GET "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
   -H "Authorization: Bearer <access_token>"
 
 # Offramp rate: USDT to NGN on Celo
-curl -X GET "https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN" \
+curl -X GET "https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
 // Onramp rate: KES to USDC on Stellar
-fetch("https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES", {
+fetch("https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",
@@ -64,7 +64,7 @@ fetch("https://api.peerpesa.co/v1/rates?type=onramp&network=stellar&asset=USDC&f
 });
 
 // Offramp rate: USDT to NGN on Celo
-fetch("https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN", {
+fetch("https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",
@@ -84,7 +84,10 @@ fetch("https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fia
   "asset": "USDC",
   "fiat_currency": "KES",
   "rate": "129.45",
-  "inverse_rate": "0.007725",
+  "rate_group": {
+    "USDT_KES": "123",
+    "KES_USDT": "0.007725"
+  },
   "updated_at": "2024-06-12T09:30:00Z"
 }
 ```
@@ -111,8 +114,18 @@ fetch("https://api.peerpesa.co/v1/rates?type=offramp&network=celo&asset=USDT&fia
   The conversion rate as a decimal string. For an onramp, this is the amount of fiat per one unit of crypto. For an offramp, it is the amount of fiat received per one unit of crypto. The exact semantics depend on the type and asset pair.
 </ResponseField>
 
-<ResponseField name="inverse_rate" type="string" required>
-  The inverse of the quoted rate as a decimal string.
+<ResponseField name="rate_group" type="object" required>
+  Rates for both directions of the pair, keyed by `FROM_TO` currency codes. Each value is a decimal string.
+
+  <Expandable title="example keys">
+    <ResponseField name="USDT_KES" type="string">
+      Amount of KES per one USDT, for example `"123"`.
+    </ResponseField>
+
+    <ResponseField name="KES_USDT" type="string">
+      Amount of USDT per one KES, for example `"0.007725"`.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="updated_at" type="string" required>

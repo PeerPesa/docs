@@ -41,7 +41,7 @@ Creates a deposit wallet on the chosen network.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallets \
+curl -X POST https://api.peerpesa.co/v2/wallets \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -52,7 +52,7 @@ curl -X POST https://api.peerpesa.co/v1/wallets \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/wallets", {
+const res = await fetch("https://api.peerpesa.co/v2/wallets", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${accessToken}`,
@@ -183,7 +183,7 @@ Adds a Lightning address or invoice to a Bitcoin wallet.
 <Tabs>
   <Tab title="Lightning address">
     ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/wallets/wal_9q1x5b/lightning \
+    curl -X POST https://api.peerpesa.co/v2/wallets/wal_9q1x5b/lightning \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{ "type": "lightning_address", "username": "cust4821" }'
@@ -203,7 +203,7 @@ Adds a Lightning address or invoice to a Bitcoin wallet.
   </Tab>
   <Tab title="Invoice">
     ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/wallets/wal_9q1x5b/lightning \
+    curl -X POST https://api.peerpesa.co/v2/wallets/wal_9q1x5b/lightning \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{ "type": "invoice", "amount_sats": 50000, "description": "Order 1042" }'

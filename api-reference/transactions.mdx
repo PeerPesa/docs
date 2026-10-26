@@ -1,9 +1,3 @@
----
-title: "Transaction History and Status Tracking"
-sidebarTitle: "Transactions"
-description: "Query onramp and offramp transactions with filters and page-number pagination, retrieve a single transaction by ID, and understand the status lifecycle."
----
-
 Every conversion you create through PeerPesa is tracked as a transaction. You can list transactions to reconcile activity, filter by status or date, and retrieve a single transaction for full details including fees, rates, and blockchain confirmation data.
 
 <Note>
@@ -85,12 +79,12 @@ Retrieve a paginated list of transactions with optional filters.
 <CodeGroup>
 
 ```bash cURL
-curl -X GET "https://api.peerpesa.co/v1/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31" \
+curl -X GET "https://api.peerpesa.co/v2/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
-fetch('https://api.peerpesa.co/v1/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31', {
+fetch('https://api.peerpesa.co/v2/transactions?page=1&size=20&status=completed&start_date=2026-07-01&end_date=2026-07-31', {
   method: 'GET',
   headers: {
     Authorization: 'Bearer <access_token>',
@@ -203,12 +197,12 @@ Fetch complete details for a single transaction by its ID.
 <CodeGroup>
 
 ```bash cURL
-curl -X GET "https://api.peerpesa.co/v1/transactions/txn_3j9x2kL8pQvW" \
+curl -X GET "https://api.peerpesa.co/v2/transactions/txn_3j9x2kL8pQvW" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
-fetch('https://api.peerpesa.co/v1/transactions/txn_3j9x2kL8pQvW', {
+fetch('https://api.peerpesa.co/v2/transactions/txn_3j9x2kL8pQvW', {
   method: 'GET',
   headers: {
     Authorization: 'Bearer <access_token>',

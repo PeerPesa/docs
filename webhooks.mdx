@@ -72,7 +72,7 @@ Registers a new endpoint.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/webhooks \
+curl -X POST https://api.peerpesa.co/v2/webhooks \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -83,7 +83,7 @@ curl -X POST https://api.peerpesa.co/v1/webhooks \
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/webhooks", {
+const res = await fetch("https://api.peerpesa.co/v2/webhooks", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${accessToken}`,

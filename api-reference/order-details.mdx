@@ -17,12 +17,12 @@ Returns one order with its transactions.
 <CodeGroup>
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/orders/22573706304032 \
+curl https://api.peerpesa.co/v2/orders/22573706304032 \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/orders/22573706304032", {
+const res = await fetch("https://api.peerpesa.co/v2/orders/22573706304032", {
   headers: { Authorization: `Bearer ${accessToken}` },
 });
 const order = await res.json();

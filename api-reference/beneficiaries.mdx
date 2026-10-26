@@ -163,7 +163,7 @@ Creates a beneficiary.
 <Tabs>
   <Tab title="Bank account">
     ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+    curl -X POST https://api.peerpesa.co/v2/beneficiaries \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{
@@ -181,7 +181,7 @@ Creates a beneficiary.
   </Tab>
   <Tab title="Phone number">
     ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+    curl -X POST https://api.peerpesa.co/v2/beneficiaries \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{
@@ -195,7 +195,7 @@ Creates a beneficiary.
   </Tab>
   <Tab title="Wallet address">
     ```bash cURL
-    curl -X POST https://api.peerpesa.co/v1/beneficiaries \
+    curl -X POST https://api.peerpesa.co/v2/beneficiaries \
       -H "Authorization: Bearer $ACCESS_TOKEN" \
       -H "Content-Type: application/json" \
       -d '{
@@ -316,13 +316,13 @@ Lists beneficiaries, newest first. Supports all [pagination and filter parameter
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v1/beneficiaries?page=1&size=20&type=phone_number&country=KE" \
+curl "https://api.peerpesa.co/v2/beneficiaries?page=1&size=20&type=phone_number&country=KE" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v1/beneficiaries?page=1&size=20&type=phone_number&country=KE",
+  "https://api.peerpesa.co/v2/beneficiaries?page=1&size=20&type=phone_number&country=KE",
   { headers: { Authorization: `Bearer ${accessToken}` } }
 );
 const { data, pagination } = await res.json();
@@ -357,7 +357,7 @@ const { data, pagination } = await res.json();
 Retrieves one beneficiary. Returns `404` with code `not_found` if the ID does not exist.
 
 ```bash cURL
-curl https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
+curl https://api.peerpesa.co/v2/beneficiaries/ben_3m7q2c \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
@@ -366,7 +366,7 @@ curl https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
 Deletes a beneficiary. Returns `204 No Content` on success. Past transactions to this beneficiary are not affected.
 
 ```bash cURL
-curl -X DELETE https://api.peerpesa.co/v1/beneficiaries/ben_3m7q2c \
+curl -X DELETE https://api.peerpesa.co/v2/beneficiaries/ben_3m7q2c \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 

@@ -79,7 +79,7 @@ PeerPesa runs two separate environments. Each has its own dashboard, API keys, a
 | | Sandbox | Production |
 | --- | --- | --- |
 | Purpose | Build and test your integration | Move real funds |
-| Base URL | `https://sandbox-api.peerpesa.co/v1` | `https://api.peerpesa.co/v1` |
+| Base URL | `https://sandbox-api.peerpesa.co/v2` | `https://api.peerpesa.co/v2` |
 | Key prefixes | `pk_test_`, `sk_test_` | `pk_live_`, `sk_live_` |
 | Funds | Simulated, no real money moves | Real fiat and crypto |
 | Access | Unlocked after KYC approval | Unlocked after KYC approval and a production access request |
@@ -92,7 +92,7 @@ PeerPesa runs two separate environments. Each has its own dashboard, API keys, a
     When your integration works end to end in sandbox, request production access from the dashboard. Compliance may ask for details about your use case and expected volume.
   </Step>
   <Step title="Go live">
-    Once production access is approved, generate live keys in the production dashboard and switch your base URL to `https://api.peerpesa.co/v1`.
+    Once production access is approved, generate live keys in the production dashboard and switch your base URL to `https://api.peerpesa.co/v2`.
   </Step>
 </Steps>
 

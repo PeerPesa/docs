@@ -11,12 +11,12 @@ Swaps use a two-step flow: first request a locked quote that fixes the rate and 
 <Tabs>
   <Tab title="Sandbox">
     ```text
-    Base URL: https://sandbox-api.peerpesa.co/v1
+    Base URL: https://sandbox-api.peerpesa.co/v2
     ```
   </Tab>
   <Tab title="Production">
     ```text
-    Base URL: https://api.peerpesa.co/v1
+    Base URL: https://api.peerpesa.co/v2
     ```
   </Tab>
 </Tabs>
@@ -172,7 +172,7 @@ POST /wallet/swap/quote
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/swap/quote \
+curl -X POST https://api.peerpesa.co/v2/wallet/swap/quote \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -191,7 +191,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/swap/quote \
 ```
 
 ```js JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/wallet/swap/quote", {
+const res = await fetch("https://api.peerpesa.co/v2/wallet/swap/quote", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
@@ -353,7 +353,7 @@ The response is a wallet transaction object.
 <CodeGroup>
 
 ```bash cURL
-curl -X POST https://api.peerpesa.co/v1/wallet/swap \
+curl -X POST https://api.peerpesa.co/v2/wallet/swap \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -363,7 +363,7 @@ curl -X POST https://api.peerpesa.co/v1/wallet/swap \
 ```
 
 ```js JavaScript
-const res = await fetch("https://api.peerpesa.co/v1/wallet/swap", {
+const res = await fetch("https://api.peerpesa.co/v2/wallet/swap", {
   method: "POST",
   headers: {
     "Authorization": "Bearer <token>",
