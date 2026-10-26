@@ -25,8 +25,8 @@ PeerPesa is a stablecoin wallet and on/off-ramp for Africa. The PeerPesa API let
 
 | Environment | Base URL |
 | --- | --- |
-| Sandbox | `https://sandbox-api.peerpesa.co/v1` |
-| Production | `https://api.peerpesa.co/v1` |
+| Sandbox | `https://sandbox-api.peerpesa.co/v2` |
+| Production | `https://api.peerpesa.co/v2` |
 
 Complete KYC verification to get API keys. Requests authenticate with a public and secret key pair exchanged for a Bearer token.
 
