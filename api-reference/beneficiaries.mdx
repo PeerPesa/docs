@@ -32,7 +32,7 @@ A beneficiary is a saved recipient you can pay again without re-entering their d
   ISO 3166-1 alpha-2 country code, for example `KE`. `null` for `wallet_address`.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string | null">
+<ResponseField name="currency" type="string | null">
   Payout currency: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`. `null` for `wallet_address`.
 </ResponseField>
 
@@ -102,7 +102,7 @@ Creates a beneficiary.
   ISO 3166-1 alpha-2 country code. Required for `bank_account` and `phone_number`.
 </ParamField>
 
-<ParamField body="fiat_currency" type="string">
+<ParamField body="currency" type="string">
   Payout currency. Required for `bank_account` and `phone_number`, and must be supported for the country.
 </ParamField>
 
@@ -170,7 +170,7 @@ Creates a beneficiary.
         "type": "bank_account",
         "name": "Chinedu Okafor",
         "country": "NG",
-        "fiat_currency": "NGN",
+        "currency": "NGN",
         "bank_account": {
           "bank_code": "058",
           "account_number": "0123456789",
@@ -188,7 +188,7 @@ Creates a beneficiary.
         "type": "phone_number",
         "name": "Amina Otieno",
         "country": "KE",
-        "fiat_currency": "KES",
+        "currency": "KES",
         "phone_number": { "phone_number": "+254712345678", "provider": "mpesa" }
       }'
     ```
@@ -219,7 +219,7 @@ Creates a beneficiary.
   "type": "bank_account",
   "name": "Chinedu Okafor",
   "country": "NG",
-  "fiat_currency": "NGN",
+  "currency": "NGN",
   "details": {
     "bank_code": "058",
     "bank_name": "GTBank",
@@ -236,7 +236,7 @@ Creates a beneficiary.
   "type": "phone_number",
   "name": "Amina Otieno",
   "country": "KE",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "details": { "phone_number": "+254712345678", "provider": "mpesa" },
   "created_at": "2026-10-15T05:00:00Z"
 }
@@ -248,7 +248,7 @@ Creates a beneficiary.
   "type": "wallet_address",
   "name": "Treasury wallet",
   "country": null,
-  "fiat_currency": null,
+  "currency": null,
   "details": {
     "wallet_address": "0x15cb5Ab94aEfd21A5458FEda25583C9938E83c74",
     "network": "celo",
@@ -297,7 +297,7 @@ Lists beneficiaries, newest first. Supports all [pagination and filter parameter
   Filter by ISO country code, for example `KE`.
 </ParamField>
 
-<ParamField query="fiat_currency" type="string">
+<ParamField query="currency" type="string">
   Filter by payout currency, for example `KES`.
 </ParamField>
 
@@ -338,7 +338,7 @@ const { data, pagination } = await res.json();
       "type": "phone_number",
       "name": "Amina Otieno",
       "country": "KE",
-      "fiat_currency": "KES",
+      "currency": "KES",
       "details": { "phone_number": "+254712345678", "provider": "mpesa" },
       "created_at": "2026-10-15T05:00:00Z"
     }
@@ -378,6 +378,6 @@ curl -X DELETE https://api.peerpesa.co/v2/beneficiaries/ben_3m7q2c \
 | `invalid_parameter` | 400 | Unknown `type` or an invalid account number. `param` names the field. |
 | `invalid_phone_number` | 422 | Phone number format is invalid for the country. |
 | `invalid_wallet_address` | 422 | `wallet_address` is not valid for the `network`. |
-| `unsupported_pair` | 422 | `fiat_currency` or `provider` is not supported for the `country`. |
+| `unsupported_pair` | 422 | `currency` or `provider` is not supported for the `country`. |
 | `unsupported_asset` | 422 | `asset` is not available on the chosen `network`. |
 | `not_found` | 404 | No beneficiary with this ID. |

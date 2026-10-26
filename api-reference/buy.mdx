@@ -55,7 +55,7 @@ POST /wallet/buy/quote
   Blockchain network, e.g. `STELLAR`, `CELO`, `BITCOIN`
 </ParamField>
 
-<ParamField body="fiat_currency" type="string" required>
+<ParamField body="currency" type="string" required>
   Fiat currency to pay with, e.g. `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`
 </ParamField>
 
@@ -85,7 +85,7 @@ POST /wallet/buy/quote
   Network code
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string">
+<ResponseField name="currency" type="string">
   Fiat currency used
 </ResponseField>
 
@@ -146,7 +146,7 @@ curl -X POST https://api.peerpesa.co/v2/wallet/buy/quote \
   -d '{
     "symbol": "USDC",
     "network": "STELLAR",
-    "fiat_currency": "KES",
+    "currency": "KES",
     "amount": "5000.00",
     "amount_currency": "fiat",
     "method": "mobile_money"
@@ -163,7 +163,7 @@ const res = await fetch("https://api.peerpesa.co/v2/wallet/buy/quote", {
   body: JSON.stringify({
     symbol: "USDC",
     network: "STELLAR",
-    fiat_currency: "KES",
+    currency: "KES",
     amount: "5000.00",
     amount_currency: "fiat",
     method: "mobile_money",
@@ -182,7 +182,7 @@ console.log(data);
   "id": "bq_2vT8xKpQrLmN9wZc",
   "symbol": "USDC",
   "network": "STELLAR",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "fiat_amount": "5000.00",
   "crypto_amount": "38.46153846",
   "rate": "130.00",

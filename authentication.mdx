@@ -123,13 +123,13 @@ Send the access token in the `Authorization` header on every request except `POS
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
+curl "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&currency=KES" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES",
+  "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&currency=KES",
   { headers: { Authorization: `Bearer ${accessToken}` } }
 );
 ```

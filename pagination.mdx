@@ -147,11 +147,11 @@ const julySwaps = await fetchAll(
 
 | Endpoint | Lists | Extra filters |
 | --- | --- | --- |
-| [`GET /orders`](/api-reference/orders) | Orders with their on-chain transactions | `order_type`, `asset`, `network`, `fiat_currency`, `recurring_payment` |
+| [`GET /orders`](/api-reference/orders) | Orders with their on-chain transactions | `order_type`, `asset`, `network`, `currency`, `recurring_payment` |
 | [`GET /recurring-payments`](/api-reference/recurring-payments) | Recurring payment schedules | `type` |
 | [`GET /recurring-payments/{id}/transactions`](/api-reference/recurring-payments) | Transactions created by one schedule | None |
-| [`GET /fees`](/api-reference/fees) | Fee products | `product`, `network`, `asset`, `fiat_currency`, `payment_method` |
-| [`GET /beneficiaries`](/api-reference/beneficiaries) | Saved beneficiaries | `type`, `country`, `fiat_currency`, `network` |
+| [`GET /fees`](/api-reference/fees) | Fee products | `product`, `network`, `asset`, `currency`, `payment_method` |
+| [`GET /beneficiaries`](/api-reference/beneficiaries) | Saved beneficiaries | `type`, `country`, `currency`, `network` |
 | [`GET /wallets`](/api-reference/deposit-wallets) | Deposit wallets | `network` |
 | [`GET /wallets/{id}/deposits`](/api-reference/deposit-wallets) | Deposits received by a wallet | None |
 | [`GET /wallets/{id}/lightning`](/api-reference/deposit-wallets) | Lightning addresses and invoices | None |

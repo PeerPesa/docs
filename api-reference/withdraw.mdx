@@ -75,7 +75,7 @@ Before you withdraw, make sure you have:
   The blockchain network for the source asset. Use uppercase network codes from [GET /currencies](/api-reference/coins), for example `STELLAR` or `CELO`. Only networks with `status: active` can be used.
 </ParamField>
 
-<ParamField body="fiat_currency" type="string" required>
+<ParamField body="currency" type="string" required>
   The fiat currency to receive. Supported values: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
 </ParamField>
 
@@ -84,11 +84,11 @@ Before you withdraw, make sure you have:
 </ParamField>
 
 <ParamField body="amount_currency" type="string" required>
-  The currency of the `amount` value. Must be either the `symbol` of the stablecoin or the `fiat_currency` code. This tells PeerPesa whether you are specifying the source stablecoin amount or the destination fiat amount.
+  The currency of the `amount` value. Must be either the `symbol` of the stablecoin or the `currency` code. This tells PeerPesa whether you are specifying the source stablecoin amount or the destination fiat amount.
 </ParamField>
 
 <ParamField body="beneficiary_id" type="string" required>
-  The ID of a saved beneficiary matching the target `fiat_currency` and payout method. Use the [Beneficiaries](/api-reference/beneficiaries) endpoints to manage beneficiaries.
+  The ID of a saved beneficiary matching the target `currency` and payout method. Use the [Beneficiaries](/api-reference/beneficiaries) endpoints to manage beneficiaries.
 </ParamField>
 
 ### Example request
@@ -103,7 +103,7 @@ curl -X POST https://api.peerpesa.co/v2/wallet/withdraw/quote \
   -d '{
     "symbol": "USDC",
     "network": "CELO",
-    "fiat_currency": "KES",
+    "currency": "KES",
     "amount": "50.00",
     "amount_currency": "USDC",
     "beneficiary_id": "ben_abc123"
@@ -121,7 +121,7 @@ const response = await fetch("https://api.peerpesa.co/v2/wallet/withdraw/quote",
   body: JSON.stringify({
     symbol: "USDC",
     network: "CELO",
-    fiat_currency: "KES",
+    currency: "KES",
     amount: "50.00",
     amount_currency: "USDC",
     beneficiary_id: "ben_abc123"
@@ -148,7 +148,7 @@ console.log(quote);
   The source blockchain network.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string">
+<ResponseField name="currency" type="string">
   The target fiat currency.
 </ResponseField>
 
@@ -161,7 +161,7 @@ console.log(quote);
 </ResponseField>
 
 <ResponseField name="destination_amount" type="string">
-  The amount the beneficiary receives, in the `fiat_currency`.
+  The amount the beneficiary receives, in the `currency`.
 </ResponseField>
 
 <ResponseField name="fee" type="object">
@@ -199,7 +199,7 @@ console.log(quote);
   "id": "quo_withdraw_xyz789",
   "symbol": "USDC",
   "network": "CELO",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "rate": "128.50",
   "source_amount": "50.00",
   "destination_amount": "6355.00",
@@ -345,7 +345,7 @@ The response is a wallet transaction object with additional withdrawal-specific 
   The beneficiary used for this withdrawal.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string">
+<ResponseField name="currency" type="string">
   The fiat currency the beneficiary receives.
 </ResponseField>
 
@@ -375,7 +375,7 @@ The response is a wallet transaction object with additional withdrawal-specific 
   "created_at": "2024-01-15T09:05:00Z",
   "updated_at": "2024-01-15T09:05:00Z",
   "beneficiary_id": "ben_abc123",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "destination_amount": "6355.00"
 }
 ```
@@ -417,7 +417,7 @@ The following errors are commonly returned by the withdrawal endpoints. All erro
 | 422 | `unsupported_network` | The requested network is not available. | Use an active network from [GET /currencies](/api-reference/coins). |
 | 422 | `unsupported_asset` | The asset is not supported on this network. | Check supported assets with [GET /currencies](/api-reference/coins). |
 | 422 | `quote_expired` | The quote `expires_at` has passed. | Request a new quote before executing. |
-| 422 | `beneficiary_mismatch` | The beneficiary does not match the quote or fiat currency. | Verify the `beneficiary_id` and `fiat_currency` pairing. |
+| 422 | `beneficiary_mismatch` | The beneficiary does not match the quote or fiat currency. | Verify the `beneficiary_id` and `currency` pairing. |
 | 404 | `recipient_not_found` | The beneficiary was not found or is inactive. | Confirm the beneficiary ID with [GET /beneficiaries](/api-reference/beneficiaries). |
 | 503 | `network_unavailable` | The settlement network is temporarily down. | Retry with exponential backoff or wait for maintenance to complete. |
 

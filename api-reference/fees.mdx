@@ -58,7 +58,7 @@ total_fee      = processing_fee + network_fee
   Asset the fee applies to, for example `USDC`. `null` when it applies to all assets.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string | null">
+<ResponseField name="currency" type="string | null">
   Fiat currency for fiat products: `KES`, `TZS`, `NGN`, `ZAR`, or `ZMW`. `null` for crypto-only products.
 </ResponseField>
 
@@ -130,7 +130,7 @@ Lists fee products. Supports [pagination and filters](/pagination).
   Filter by asset, for example `USDC`.
 </ParamField>
 
-<ParamField query="fiat_currency" type="string">
+<ParamField query="currency" type="string">
   Filter by fiat currency, for example `KES`.
 </ParamField>
 
@@ -153,13 +153,13 @@ Lists fee products. Supports [pagination and filters](/pagination).
 <CodeGroup>
 
 ```bash cURL
-curl "https://api.peerpesa.co/v2/fees?product=offramp&fiat_currency=KES" \
+curl "https://api.peerpesa.co/v2/fees?product=offramp&currency=KES" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
 
 ```javascript JavaScript
 const res = await fetch(
-  "https://api.peerpesa.co/v2/fees?product=offramp&fiat_currency=KES",
+  "https://api.peerpesa.co/v2/fees?product=offramp&currency=KES",
   { headers: { Authorization: `Bearer ${accessToken}` } }
 );
 const { data: feeProducts, pagination } = await res.json();
@@ -176,7 +176,7 @@ const { data: feeProducts, pagination } = await res.json();
       "name": "Offramp to KES mobile money",
       "network": null,
       "asset": "USDC",
-      "fiat_currency": "KES",
+      "currency": "KES",
       "payment_method": "phone_number",
       "fee_currency": "USDC",
       "percentage": "1.00",
@@ -194,7 +194,7 @@ const { data: feeProducts, pagination } = await res.json();
       "name": "Offramp to KES bank account",
       "network": null,
       "asset": "USDC",
-      "fiat_currency": "KES",
+      "currency": "KES",
       "payment_method": "bank_account",
       "fee_currency": "USDC",
       "percentage": "0.75",

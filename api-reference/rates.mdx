@@ -13,7 +13,7 @@ PeerPesa provides indicative conversion rates so you can estimate the value of a
 ## Get conversion rate
 
 ```http
-GET /rates?type={type}&network={network}&asset={asset}&fiat_currency={fiat_currency}
+GET /rates?type={type}&network={network}&asset={asset}&currency={currency}
 ```
 
 Retrieve the current conversion rate for an onramp (fiat to crypto) or offramp (crypto to fiat) pair.
@@ -35,7 +35,7 @@ Retrieve the current conversion rate for an onramp (fiat to crypto) or offramp (
   - `celo`: `CELO`, `USDT`, `USDC`, `CUSD`
 </ParamField>
 
-<ParamField query="fiat_currency" type="string" required>
+<ParamField query="currency" type="string" required>
   Fiat currency code. Supported values: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
 </ParamField>
 
@@ -45,17 +45,17 @@ Retrieve the current conversion rate for an onramp (fiat to crypto) or offramp (
 
 ```bash cURL
 # Onramp rate: KES to USDC on Stellar
-curl -X GET "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES" \
+curl -X GET "https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&currency=KES" \
   -H "Authorization: Bearer <access_token>"
 
 # Offramp rate: USDT to NGN on Celo
-curl -X GET "https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN" \
+curl -X GET "https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&currency=NGN" \
   -H "Authorization: Bearer <access_token>"
 ```
 
 ```javascript JavaScript
 // Onramp rate: KES to USDC on Stellar
-fetch("https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&fiat_currency=KES", {
+fetch("https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&currency=KES", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",
@@ -64,7 +64,7 @@ fetch("https://api.peerpesa.co/v2/rates?type=onramp&network=stellar&asset=USDC&f
 });
 
 // Offramp rate: USDT to NGN on Celo
-fetch("https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fiat_currency=NGN", {
+fetch("https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&currency=NGN", {
   method: "GET",
   headers: {
     "Authorization": "Bearer <access_token>",
@@ -82,7 +82,7 @@ fetch("https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fia
   "type": "onramp",
   "network": "stellar",
   "asset": "USDC",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "rate": "129.45",
   "rate_group": {
     "USDT_KES": "129.45",
@@ -106,7 +106,7 @@ fetch("https://api.peerpesa.co/v2/rates?type=offramp&network=celo&asset=USDT&fia
   The crypto asset code (e.g. `USDC`, `USDT`, `CUSD`).
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string" required>
+<ResponseField name="currency" type="string" required>
   The fiat currency code (e.g. `KES`, `NGN`).
 </ResponseField>
 

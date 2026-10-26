@@ -42,7 +42,7 @@ Locks a rate and fee breakdown for a specific network, asset, fiat currency, amo
   Asset code on the network. Stellar: `XLM`, `USDC`. Celo: `CELO`, `USDT`, `USDC`, `CUSD`.
 </ParamField>
 
-<ParamField body="fiat_currency" type="string" required>
+<ParamField body="currency" type="string" required>
   Fiat currency code: `KES`, `TZS`, `NGN`, `ZAR`, `ZMW`.
 </ParamField>
 
@@ -51,7 +51,7 @@ Locks a rate and fee breakdown for a specific network, asset, fiat currency, amo
 </ParamField>
 
 <ParamField body="amount_currency" type="string" required>
-  Currency the `amount` refers to: the `asset` code or the `fiat_currency` code.
+  Currency the `amount` refers to: the `asset` code or the `currency` code.
 </ParamField>
 
 <ParamField body="method" type="string" required>
@@ -70,7 +70,7 @@ curl -X POST https://api.peerpesa.co/v2/quotes \
     "type": "onramp",
     "network": "stellar",
     "asset": "USDC",
-    "fiat_currency": "KES",
+    "currency": "KES",
     "amount": "10000.00",
     "amount_currency": "KES",
     "method": "mobile_money"
@@ -88,7 +88,7 @@ const res = await fetch("https://api.peerpesa.co/v2/quotes", {
     type: "onramp",
     network: "stellar",
     asset: "USDC",
-    fiat_currency: "KES",
+    currency: "KES",
     amount: "10000.00",
     amount_currency: "KES",
     method: "mobile_money",
@@ -107,7 +107,7 @@ const quote = await res.json();
   "type": "onramp",
   "network": "stellar",
   "asset": "USDC",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "method": "mobile_money",
   "rate": "129.45",
   "source_amount": "10000.00",
@@ -275,7 +275,7 @@ Returns the transaction created from the quote. Onramps start in `awaiting_payme
   "quote_id": "qt_8f2k3m9n1p0q",
   "network": "stellar",
   "asset": "USDC",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "rate": "129.45",
   "source_amount": "10000.00",
   "destination_amount": "75.75",

@@ -8,7 +8,7 @@ An onramp converts local fiat into cryptocurrency. After you create a quote that
 
 <Steps>
   <Step title="Check the rate">
-    Call [GET /rates](/api-reference/rates) with `type=onramp` and your preferred `network`, `asset`, and `fiat_currency` to see the current indicative rate.
+    Call [GET /rates](/api-reference/rates) with `type=onramp` and your preferred `network`, `asset`, and `currency` to see the current indicative rate.
   </Step>
   <Step title="Create a quote">
     Call [POST /quotes](/api-reference/quotes) to lock the rate and fee breakdown for 30 minutes. Save the quote `id`.
@@ -96,7 +96,7 @@ console.log(data);
   "quote_id": "qt_8f2k3m9n1p0q",
   "network": "stellar",
   "asset": "USDC",
-  "fiat_currency": "KES",
+  "currency": "KES",
   "source_amount": "100.00",
   "destination_amount": "0.76",
   "fee": {
@@ -145,7 +145,7 @@ console.log(data);
   Crypto asset sent after fiat is received.
 </ResponseField>
 
-<ResponseField name="fiat_currency" type="string">
+<ResponseField name="currency" type="string">
   Fiat currency being paid.
 </ResponseField>
 
